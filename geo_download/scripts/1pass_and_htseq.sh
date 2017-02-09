@@ -3,11 +3,23 @@
 
 STAR=/usr/local/bin/STAR
 HTSEQ=/usr/local/bin/htseq-count
+SAMTOOLS=/usr/local/bin/samtools
 GENOME_DIR=/data/jwang/genome/STAR/HG38/
 GENOME_FASTA=/data/jwang/genome/hg38/hg38.fa
 SJDB_GTF=/data/jwang/genome/hg38/hg38.gtf
-#COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outSAMmapqUnique 60 --twopassMode Basic --outSAMtype BAM	SortedByCoordinate -outSAMstrandField intronMotif"
-COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outSAMtype SAM"
+COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outFilterType BySJout \
+--outFilterMultimapNmax 20 \
+--alignSJoverhangMin 8 \
+--alignSJDBoverhangMin 1 \
+--outFilterMismatchNmax 999 \
+--outFilterMismatchNoverLmax 0.04 \
+--alignIntronMin 20 \
+--alignIntronMax 1000000 \
+--alignMatesGapMax 1000000 \
+--outSAMstrandField intronMotif \
+--outSAMtype BAM Unsorted \
+--outSAMattributes NH HI NM MD"
+#COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outSAMtype SAM"
 OUTPUT_DIR=$1
 READS="${2} ${3}"
 #Reads="/home/dobin/STARruns/STARtests/2pass/LID16627_FC61U30AAXX_3_1.txt /home/dobin/STARruns/STARtests/2pass/LID16627_FC61U30AAXX_3_2.txt"
@@ -31,6 +43,9 @@ cd Pass1
 $STAR $COMMON_PARS --genomeDir $GENOME_DIR --readFilesIn $READS
 cd ..
 
+# sam tools sort
+$SAMTOOLS sort -n -m 6000000000 -o Pass1/Aligned.out.sorted.bam Pass1/Aligned.out.bam
+
 # htseq-count 
 echo "Running htseq"
-$HTSEQ -s no -r pos -f sam -m intersection-nonempty  ./Pass1/Aligned.out.sam $SJDB_GTF > htseq-count.txt
+$HTSEQ -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted.bam $SJDB_GTF > htseq-count.txt
