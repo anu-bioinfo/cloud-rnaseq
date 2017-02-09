@@ -19,10 +19,12 @@ COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outFilterType BySJout \
 --outSAMstrandField intronMotif \
 --outSAMtype BAM Unsorted \
 --outSAMattributes NH HI NM MD"
+# --readFilesCommand zcat
 #COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outSAMtype SAM"
+#if [ $? -eq 0 ]; then touch z.txt; fi
+
 OUTPUT_DIR=$1
 READS="${2} ${3}"
-#Reads="/home/dobin/STARruns/STARtests/2pass/LID16627_FC61U30AAXX_3_1.txt /home/dobin/STARruns/STARtests/2pass/LID16627_FC61U30AAXX_3_2.txt"
 
 if [ $# -lt 2 ]; then 
   echo "Usage: $0 <outputdir> <read_file_1> [<read_file_2>]"
