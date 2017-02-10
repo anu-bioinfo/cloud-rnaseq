@@ -1,6 +1,8 @@
+#!/usr/bin/python
 import argparse
 import subprocess
 import os
+import sys
 import thread
 import time
 
@@ -19,6 +21,7 @@ SEQUENCE_COMMAND = '/home/yunfang/code/hca/geo_download/scripts/1pass_and_htseq.
 MIN_FILE_SIZE = 5000
 MAX_THREADS = 3
 S3_BUCKET = 's3://czsi-sra'
+MAX_RETRIES = 5
 
 def run_sample(download_path, s3_prefix):
 	''' Example: 
@@ -82,16 +85,22 @@ def run_sample(download_path, s3_prefix):
 
 def run_samples(sample_list, doc_id, tn):
 	for download_path in sample_list:
+		tries = 1
 		while 1:
 			try:
 				run_sample(download_path, doc_id)
 				break
-			except CalledProcessError:
-				time.sleep(30)
+			except subprocess.CalledProcessError as e:
+				if tries >= MAX_RETRIES:
+					print download_path + " doesn't exist on ftp site"
+					break
+				else:
+					time.sleep(30*tries)
+					tries += 1
 		#print "%d run_sample(%s)" % (tn, download_path)
 		#time.sleep(1)
 	
-def run(doc_id):
+def run_old(doc_id):
 	''' Example: run("200066217") '''
 	file_list = json.loads(REDIS_STORE.get('sra:' + doc_id) or "[]")
 	thread_queues = []
@@ -113,11 +122,33 @@ def run(doc_id):
 		print "Error: unable to start thread"
 	
 	return thread_queues
+
+def run(doc_list):
+	for doc_id in doc_list:
+		file_list = json.loads(REDIS_STORE.get('sra:' + doc_id) or "[]")
+		for sra_item in file_list:
+			sra_download_path = sra_item[1]
+			run_sample(sra_download_path, doc_id)
+			print "%s : %s " % (doc_id, sra_download_path)
 	
 	
 def main():
 	parser = argparse.ArgumentParser(
-		description='Download data from a GEO dataset, sequence and generate expression counts')
+		description='Download data from GEO datasets')
+	parser.add_argument('-f', action="store", dest='doc_list_file', default=False)
+	results = parser.parse_args()
+	if results.doc_list_file:
+		doc_list = []
+		with open(results.doc_list_file, 'r') as doc_list_f:
+			for line in doc_list_f:
+				doc_list.append(line.rstrip())
+		run(doc_list)
+		
+	else: 
+		parser.print_help()
+		sys.exit(1)
+
+		
 
 
 if __name__ == "__main__":
