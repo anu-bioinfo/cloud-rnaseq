@@ -12,6 +12,8 @@ import json
 import redis
 import re
 
+''' REDIS DB can be downloaded at s3://czsi-sra-config/dataset_info/dump.rdb.gz'''
+
 REDIS_STORE = redis.StrictRedis(host='localhost', port=6379, db=2)
 FTP_HOST = "ftp://ftp-trace.ncbi.nlm.nih.gov"
 DEST_DIR = "/data/hca/"
