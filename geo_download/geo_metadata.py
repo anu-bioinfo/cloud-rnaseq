@@ -93,14 +93,14 @@ def download_search_results(query, force_download = False):
         page += 1
 
 
-sc_re = re.compile("single[\s\-]*cell", re.M)
+sc_re = re.compile("single[\s\-]*cell", re.M | re.U)
 def doc_filter(doc_hash):
     if not doc_hash['ExtRelations']:
         return False
 
     summary = doc_hash['summary'].lower()
     title = doc_hash['title'].lower()
-    if not sc_re.match(summary) and not sc_re.match(title):
+    if not sc_re.search(summary) and not sc_re.search(title):
         return False
 
     if not doc_hash['PubMedIds']:
