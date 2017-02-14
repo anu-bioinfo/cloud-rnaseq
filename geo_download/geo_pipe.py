@@ -26,8 +26,8 @@ S3_BUCKET = 's3://czsi-sra'
 MAX_RETRIES = 5
 
 def run_sample(download_path, s3_prefix):
-	''' Example: 
-	   run_sample("/sra/sra-instant/reads/ByStudy/sra/SRP/SRP055/SRP055440//SRR1813952/SRR1813952.sra" 
+	''' Example:
+	   run_sample("/sra/sra-instant/reads/ByStudy/sra/SRP/SRP055/SRP055440//SRR1813952/SRR1813952.sra"
 	'''
 	filename = os.path.basename(download_path)
 	sample_name = os.path.splitext(filename)[0]
@@ -40,7 +40,7 @@ def run_sample(download_path, s3_prefix):
 	if (os.path.exists(done_file)):
 		return "%s already downloaded" % download_path
 
-	command = "%s -O %s %s" % (WGET, dest_file, download_url) 
+	command = "%s -O %s %s" % (WGET, dest_file, download_url)
 	print command
 	output = subprocess.check_output(command, shell=True)
 	print output
@@ -51,7 +51,7 @@ def run_sample(download_path, s3_prefix):
 	output = subprocess.check_output(command, shell=True)
 	print output
 	# run sequencing and htseq
-	command = "ls " + DEST_DIR + 'rawdata/' + sample_name + '*.fastq' 
+	command = "ls " + DEST_DIR + 'rawdata/' + sample_name + '*.fastq'
 	fastq_files = subprocess.check_output(command, shell=True).replace("\n", " ")
 
 	#compressed the files
@@ -62,19 +62,19 @@ def run_sample(download_path, s3_prefix):
 
 	# move data over to s3
         s3_dest = S3_BUCKET + '/' + s3_prefix + '/rawdata/' + sample_name + '/'
-        sample_files =  DEST_DIR + 'rawdata/'+ sample_name + '*.*' 
+        sample_files =  DEST_DIR + 'rawdata/'+ sample_name + '*.*'
 	command = "s3cmd put %s %s" % (sample_files, s3_dest)
 
 	print command
 	output = subprocess.check_output(command, shell=True)
 	print output
 
-	# cleanup and mark  
+	# cleanup and mark
 	command = "rm -rf %s; if [ $? -eq 0 ]; then touch %s; fi" % (sample_files, done_file)
 	print command
 	output = subprocess.check_output(command, shell=True)
 	print output
-	
+
 	'''
 	print "Run sequencing"
 	result_dir = DEST_DIR + 'results/' + sample_name
@@ -101,7 +101,7 @@ def run_samples(sample_list, doc_id, tn):
 					tries += 1
 		#print "%d run_sample(%s)" % (tn, download_path)
 		#time.sleep(1)
-	
+
 def run_old(doc_id):
 	''' Example: run("200066217") '''
 	file_list = json.loads(REDIS_STORE.get('sra:' + doc_id) or "[]")
@@ -120,9 +120,9 @@ def run_old(doc_id):
 			thread.start_new_thread(run_samples, (queue, doc_id, idx))
 			time.sleep(30)
 			idx += 1
-	except:	
+	except:
 		print "Error: unable to start thread"
-	
+
 	return thread_queues
 
 def run(doc_list):
@@ -132,8 +132,8 @@ def run(doc_list):
 			sra_download_path = sra_item[1]
 			run_sample(sra_download_path, doc_id)
 			print "%s : %s " % (doc_id, sra_download_path)
-	
-	
+
+
 def main():
 	parser = argparse.ArgumentParser(
 		description='Download data from GEO datasets')
@@ -145,12 +145,12 @@ def main():
 			for line in doc_list_f:
 				doc_list.append(line.rstrip())
 		run(doc_list)
-		
-	else: 
+
+	else:
 		parser.print_help()
 		sys.exit(1)
 
-		
+
 
 
 if __name__ == "__main__":
