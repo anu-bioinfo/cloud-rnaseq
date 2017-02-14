@@ -1,0 +1,19 @@
+build_docker_image:
+  base_image: ubuntu:16.04
+
+build_image:
+  rootfs_skel_dirs:
+    $append: rootfs.skel
+  packages:
+    $extend:
+      - python-scipy
+      - sra-toolkit
+      - samtools
+      - redis-server
+      - python-redis
+  commands:
+    $extend:
+      - "pip install htseq==0.6.1p1"
+      - "curl -L https://github.com/alexdobin/STAR/archive/2.5.2b.tar.gz | tar xz"
+      - "mv STAR-2.5.2b/bin/Linux_x86_64_static/* /usr/local/bin"
+      - "rm -rf STAR-2.5.2b"
