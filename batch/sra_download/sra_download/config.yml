@@ -1,0 +1,25 @@
+build_docker_image:
+  base_image: ubuntu:16.04
+
+build_image:
+  rootfs_skel_dirs:
+    $append: rootfs.skel
+  packages:
+    $extend:
+      - python-scipy
+      - sra-toolkit
+      - samtools
+      - python-redis
+      - gdebi-core
+  commands:
+    $extend:
+      - "pip install htseq==0.6.1p1"
+      - "pip install redis"
+      - "pip install biopython"
+      - "curl -L https://github.com/alexdobin/STAR/archive/2.5.2b.tar.gz | tar xz"
+      - "mv STAR-2.5.2b/bin/Linux_x86_64_static/* /usr/local/bin"
+      - "rm -rf STAR-2.5.2b"
+      - "curl -L http://mirrors.kernel.org/ubuntu/pool/universe/r/redis/redis-tools_3.2.1-1_amd64.deb > redis-tools_3.2.1-1_amd64.deb"
+      - "curl -L http://mirrors.kernel.org/ubuntu/pool/universe/r/redis/redis-server_3.2.1-1_amd64.deb > redis-server_3.2.1-1_amd64.deb"
+      - "gdebi --non-interactive redis-tools_3.2.1-1_amd64.deb"
+      - "gdebi --non-interactive redis-server_3.2.1-1_amd64.deb"
