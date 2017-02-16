@@ -18,8 +18,8 @@ COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outFilterType BySJout \
 --alignMatesGapMax 1000000 \
 --outSAMstrandField intronMotif \
 --outSAMtype BAM Unsorted \
---outSAMattributes NH HI NM MD"
-# --readFilesCommand zcat
+--outSAMattributes NH HI NM MD \
+--readFilesCommand zcat"
 #COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outSAMtype SAM"
 #if [ $? -eq 0 ]; then touch z.txt; fi
 
