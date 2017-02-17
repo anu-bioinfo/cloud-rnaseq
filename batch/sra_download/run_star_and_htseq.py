@@ -24,12 +24,12 @@ S3_BUCKET = 's3://czi-hca/data'
 
 
 STAR="/usr/local/bin/STAR"
-HTSEQ="/usr/local/bin/htseq-count"
-SAMTOOLS="/usr/local/bin/samtools"
+HTSEQ="htseq-count"
+SAMTOOLS="samtools"
 
-GENOME_DIR="/mnt/genome/STAR/HG38/" # change
-GENOME_FASTA="/mnt/genome/hg38/hg38.fa" # change
-SJDB_GTF="/mnt/genome/hg38/hg38.gtf" # change
+GENOME_DIR="/mnt/genome/STAR/HG38-PLUS/" # change
+GENOME_FASTA="/mnt/genome/hg38-plus/hg38-plus.fa" # change
+SJDB_GTF="/mnt/genome/hg38-plus/hg38-plus.gtf" # change
 
 COMMON_PARS="--runThreadN 12 --outFilterType BySJout \
 --outFilterMultimapNmax 20 \
@@ -72,11 +72,14 @@ def run_sample(sample_name, doc_id):
 	command = "cd %s/results; mkdir -p Pass1; cd Pass1;" % dest_dir
 	command += STAR + ' ' + COMMON_PARS + ' --genomeDir ' + GENOME_DIR + ' --sjdbGTFfile ' + SJDB_GTF + ' --readFilesIn ' + reads
 	print command
+	sys.stdout.flush()
 	output = subprocess.check_output(command, shell=True)
 	# running sam tools
-	command = "cd %s/results; %s sort -n -m 6000000000 -o Pass1/Aligned.out.sorted.bam Pass1/Aligned.out.bam" % (dest_dir, SAMTOOLS)
+	command = "cd %s/results; %s sort -n -m 6000000000 -o ./Pass1/Aligned.out.sorted.bam ./Pass1/Aligned.out.bam" % (dest_dir, SAMTOOLS)
 	print command
 	output = subprocess.check_output(command, shell=True)
+	print output
+	sys.stdout.flush()
 
 	# running htseq
 	command = "cd %s/results; %s -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted.bam  %s > htseq-count.txt" % (dest_dir, HTSEQ, SJDB_GTF)
@@ -106,6 +109,8 @@ def run_sample(sample_name, doc_id):
 	command = "rm -rf %s" % dest_dir
 	print command
 	subprocess.check_output(command, shell=True)
+
+	sys.stdout.flush()
 	
 	
 
@@ -126,8 +131,10 @@ def run(doc_id, num_partitions, partition_id):
 			try:
 				run_sample(sample_name, doc_id)
 				print "%s : %s " % (doc_id, sample_name)
+			except subprocess.CalledProcessError, e:
+    				print "Ping stdout output: %s for sample %s\n" % (e.output, sample_name)
 			except Exception:
-				print "Error downloading %s. Retry in 5 seconds" % sample_name
+				print "Error processing %s. Retry in 5 seconds" % sample_name
 				
 		idx += 1
 
@@ -139,22 +146,23 @@ def main():
 	partition_id = int(os.environ['PARTITION_ID'])
 
 	# download the genome data
-	command = "mkdir -p /mnt/genome; aws s3 cp s3://czi-hca/ref-genome/hg38.tgz /mnt/genome"
+	command = "mkdir -p /mnt/genome; aws s3 cp s3://czi-hca/ref-genome/hg38-plus.tgz /mnt/genome"
 	print command
 	subprocess.check_output(command, shell=True)
 
-	command = "cd /mnt/genome; tar xvfz hg38.tgz"
+	command = "cd /mnt/genome; tar xvfz hg38-plus.tgz"
 	print command
 	subprocess.check_output(command, shell=True)
 
-	command = "mkdir -p /mnt/genome/STAR; aws s3 cp s3://czi-hca/ref-genome/STAR/HG38.tgz /mnt/genome/STAR"
+	command = "mkdir -p /mnt/genome/STAR; aws s3 cp s3://czi-hca/ref-genome/STAR/HG38-PLUS.tgz /mnt/genome/STAR"
 	print command
 	subprocess.check_output(command, shell=True)
 
-	command = "cd /mnt/genome/STAR; tar xvfz HG38.tgz"
+	command = "cd /mnt/genome/STAR; tar xvfz HG38-PLUS.tgz"
 	print command
 	subprocess.check_output(command, shell=True)
 
+	sys.stdout.flush()
 	# run through the samples
 	run(doc_id, num_partitions, partition_id)
 

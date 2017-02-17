@@ -4,9 +4,9 @@
 STAR=/usr/local/bin/STAR
 HTSEQ=/usr/local/bin/htseq-count
 SAMTOOLS=/usr/local/bin/samtools
-GENOME_DIR=/data/jwang/genome/STAR/HG38/
-GENOME_FASTA=/data/jwang/genome/hg38/hg38.fa
-SJDB_GTF=/data/jwang/genome/hg38/hg38.gtf
+GENOME_DIR=/data/hca/genome/STAR/HG38-PLUS/
+GENOME_FASTA=/data/hca/genome/hg38-plus/hg38-plus.fa
+SJDB_GTF=/data/hca/genome/hg38-plus/hg38-plus.gtf
 COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outFilterType BySJout \
 --outFilterMultimapNmax 20 \
 --alignSJoverhangMin 8 \
