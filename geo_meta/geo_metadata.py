@@ -19,10 +19,9 @@ REDIS_STORE = redis.StrictRedis(host='localhost', port=6379, db=2)
 SR_PREFIX = 'sr:pg:'
 GDS_PREFIX = 'gds:'
 SRA_PREFIX = 'sra:'
+GSM_PREFIX = 'gsm'
 PAGE_SIZE = 500
-ITEMS_PER_DOWNLOAD = 10
-
-
+ITEMS_PER_DOWNLOAD = 20
 
 def query_to_sig(query):
     return hashlib.md5(query).hexdigest()
@@ -58,12 +57,12 @@ def fetch_esummary(id_str, mydb='gds', pfx = GDS_PREFIX):
             handle = Entrez.esummary(db=mydb, id=id_str)
             records = Entrez.read(handle)
             handle.close()
-
-            for r in records:
-                key = "%s%s" %(pfx, r['Id'])
-                val = json.dumps(r)
-                REDIS_STORE.set(key, val)
-            return
+            if len(pfx) > 0:
+                for r in records: 
+                    key = "%s%s" %(pfx, r['Id'])
+                    val = json.dumps(r)
+                    REDIS_STORE.set(key, val)
+            return records
         except Exception:
             print("ERROR getting %s" % id_str)
             time.sleep(5)
@@ -198,6 +197,64 @@ def doc_summary_to_file(doc_list, filename):
             output += "=============================================================\n"
             fd.write("%s\n" % output)
             idx += 1
+
+def get_gsm_mapping(doc_id):
+    ''' get srr to gsm mapping for gds doc_id'''
+    redis_key = GDS_PREFIX + doc_id
+    rec = json.loads(REDIS_STORE.get(redis_key)) 
+    samples = rec['Samples']
+    tmp_mapping = {}
+    real_mapping = {}
+    idx = 0
+    retries = 0
+    while idx < len(samples):
+        sample = samples[idx]
+        gsm_id = sample['Accession']
+        try:
+            handle = Entrez.esearch(db="sra", retmax=5, term=gsm_id)
+            record = Entrez.read(handle)
+            handle.close()
+            sra_ids = record['IdList']
+            for sra_id in sra_ids:
+                tmp_mapping[sra_id] = gsm_id
+            idx += 1
+            retries = 0
+            if idx % 10 == 0:
+                print "getting %d sra samples" % idx
+        except Exception:
+            print "Entrez error for searching %s." % gsm_id
+            retries += 1
+            if retries >= 3:
+                # try to get 3 times. skip
+                idx += 1
+    batch_list = []
+    id_list = tmp_mapping.keys()
+    records = []
+    for sra_id in id_list:
+        batch_list.append(sra_id)
+        if len(batch_list) >= ITEMS_PER_DOWNLOAD:
+            records += fetch_esummary(",".join(batch_list), 'sra', "")
+            batch_list = []
+    records += fetch_esummary(",".join(batch_list), 'sra', "")
+    
+    for r in records:
+        sra_id = r['Id']
+        sra_runs = r['Runs']
+        m = re.search('Run acc="(\w+)"', sra_runs)
+        if m:
+            srr_id = m.group(1)
+            gsm_id = tmp_mapping[sra_id]
+            real_mapping[srr_id] = gsm_id
+    redis_key = GSM_PREFIX + doc_id
+    redis_val = json.dumps(real_mapping)
+    REDIS_STORE.set(redis_key, redis_val)
+            
+    return real_mapping
+
+def get_gsm_mapping_for_doc_list(doc_list):
+    for doc_id in doc_list: 
+        get_gsm_mapping(doc_id)
+
 def main():
     parser = argparse.ArgumentParser(
         description='Download metadata from GEO datasets')
@@ -215,6 +272,9 @@ def main():
             download_search_results(query)
 
         final_download_list = get_final_sra_list(queries)
+        print "Fetching info to get SRR to GSM mapping for each doc_id"
+        get_gsm_mapping_for_doc_list(final_download_list)
+
         download_sra_urls(final_download_list)
         doc_list_to_file(final_download_list, 'sra_doc_ids.txt')
         doc_summary_to_file(final_download_list, 'sra_doc_summaries.txt')
