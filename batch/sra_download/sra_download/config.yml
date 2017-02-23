@@ -8,7 +8,6 @@ build_image:
     $extend:
       - python-scipy
       - sra-toolkit
-      - samtools
       - python-redis
       - gdebi-core
   commands:
@@ -16,6 +15,7 @@ build_image:
       - "pip install htseq==0.6.1p1"
       - "pip install redis"
       - "pip install biopython"
+      - "pip install pysam"
       - "curl -L https://github.com/alexdobin/STAR/archive/2.5.2b.tar.gz | tar xz"
       - "mv STAR-2.5.2b/bin/Linux_x86_64_static/* /usr/local/bin"
       - "rm -rf STAR-2.5.2b"
@@ -23,3 +23,5 @@ build_image:
       - "curl -L http://mirrors.kernel.org/ubuntu/pool/universe/r/redis/redis-server_3.2.1-1_amd64.deb > redis-server_3.2.1-1_amd64.deb"
       - "gdebi --non-interactive redis-tools_3.2.1-1_amd64.deb"
       - "gdebi --non-interactive redis-server_3.2.1-1_amd64.deb"
+      - "curl -L https://sourceforge.net/projects/samtools/files/samtools/1.3/samtools-1.3.tar.bz2/download > samtools-1.3.tar.bz2"
+      - " tar xjf samtools-1.3.tar.bz2; cd samtools-1.3; make; make install; samtools --version"

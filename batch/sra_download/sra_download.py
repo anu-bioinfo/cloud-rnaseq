@@ -91,6 +91,22 @@ def run(doc_id, num_partitions, partition_id):
 	print "Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id)
 	file_list = json.loads(REDIS_STORE.get('sra:' + doc_id) or "[]")
 	idx = 0
+	if partition_id == 0: # Download FTP meta data
+		doc_info = json.loads(REDIS_STORE.get('gds:' + doc_id) or "{}")
+		meta_data_link = doc_info['FTPLink']
+		if meta_data_link:
+			download_url = meta_data_link + '/soft/' + doc_info['Accession'] + '_family.soft.gz'
+			dest_dir = DEST_DIR + 'metadata/' + doc_id + '/'
+			command = "mkdir -p %s; cd %s; %s %s" % (dest_dir, dest_dir, WGET, download_url)
+			print command
+			output = subprocess.check_output(command, shell=True)
+	                	
+			source_file = dest_dir + doc_info['Accession'] + '_family.soft.gz'
+			s3_dest = S3_BUCKET + '/' + doc_id + '/metadata/' 
+			command = "aws s3 cp %s  %s" % (source_file, s3_dest)
+			print command
+			output = subprocess.check_output(command, shell=True)
+		
 	for sra_item in file_list:
 		if idx % num_partitions == partition_id:
 			tries = 1
@@ -126,6 +142,7 @@ def main():
 	doc_id = os.environ['GDS_ID']
 	num_partitions = int(os.environ['NUM_PARTITIONS'])
 	partition_id = int(os.environ['PARTITION_ID'])
+		
 	run(doc_id, num_partitions, partition_id)
 
 
