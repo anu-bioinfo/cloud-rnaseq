@@ -198,8 +198,14 @@ def doc_summary_to_file(doc_list, filename):
             fd.write("%s\n" % output)
             idx += 1
 
-def get_gsm_mapping(doc_id):
+def get_gsm_mapping(doc_id, force_download = False):
     ''' get srr to gsm mapping for gds doc_id'''
+   
+   # check if already exists
+    redis_key = GSM_PREFIX + doc_id
+    if REDIS_STORE.get(redis_key) is not None and not force_download:
+        return
+
     redis_key = GDS_PREFIX + doc_id
     rec = json.loads(REDIS_STORE.get(redis_key)) 
     samples = rec['Samples']
@@ -220,7 +226,7 @@ def get_gsm_mapping(doc_id):
             idx += 1
             retries = 0
             if idx % 10 == 0:
-                print "getting %d sra samples" % idx
+                print "getting %d sra samples for %d" % (idx, doc_id)
         except Exception:
             print "Entrez error for searching %s." % gsm_id
             retries += 1
@@ -235,7 +241,8 @@ def get_gsm_mapping(doc_id):
         if len(batch_list) >= ITEMS_PER_DOWNLOAD:
             records += fetch_esummary(",".join(batch_list), 'sra', "")
             batch_list = []
-    records += fetch_esummary(",".join(batch_list), 'sra', "")
+    if len(batch_list) > 0:
+        records += fetch_esummary(",".join(batch_list), 'sra', "")
     
     for r in records:
         sra_id = r['Id']
@@ -251,9 +258,9 @@ def get_gsm_mapping(doc_id):
             
     return real_mapping
 
-def get_gsm_mapping_for_doc_list(doc_list):
+def get_gsm_mapping_for_doc_list(doc_list, force_download = False):
     for doc_id in doc_list: 
-        get_gsm_mapping(doc_id)
+        get_gsm_mapping(doc_id, force_download)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -274,8 +281,8 @@ def main():
         final_download_list = get_final_sra_list(queries)
         print "Fetching info to get SRR to GSM mapping for each doc_id"
         get_gsm_mapping_for_doc_list(final_download_list)
-
         download_sra_urls(final_download_list)
+
         doc_list_to_file(final_download_list, 'sra_doc_ids.txt')
         doc_summary_to_file(final_download_list, 'sra_doc_summaries.txt')
     else:
