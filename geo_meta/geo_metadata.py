@@ -200,7 +200,6 @@ def doc_summary_to_file(doc_list, filename):
 
 def get_gsm_mapping(doc_id, force_download = False):
     ''' get srr to gsm mapping for gds doc_id'''
-   
    # check if already exists
     redis_key = GSM_PREFIX + doc_id
     if REDIS_STORE.get(redis_key) is not None and not force_download:
@@ -226,7 +225,7 @@ def get_gsm_mapping(doc_id, force_download = False):
             idx += 1
             retries = 0
             if idx % 10 == 0:
-                print "getting %d sra samples for %d" % (idx, doc_id)
+                print "getting %d sra samples for %s" % (idx, doc_id)
         except Exception:
             print "Entrez error for searching %s." % gsm_id
             retries += 1
@@ -261,6 +260,12 @@ def get_gsm_mapping(doc_id, force_download = False):
 def get_gsm_mapping_for_doc_list(doc_list, force_download = False):
     for doc_id in doc_list: 
         get_gsm_mapping(doc_id, force_download)
+
+def output_gsm_mapping_for_doc_id(doc_id, output_file):
+    gsm_map = json.loads(REDIS_STORE.get(GSM_PREFIX + doc_id) or "{}") 
+    with open(output_file, "w") as out_f:
+        for key, val in gsm_map.iteritems():
+            out_f.write("%s,%s\n" % (key, val))
 
 def main():
     parser = argparse.ArgumentParser(
