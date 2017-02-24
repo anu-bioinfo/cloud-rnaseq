@@ -25,6 +25,12 @@ MAX_THREADS = 3
 S3_BUCKET = 's3://czi-hca/data'
 MAX_RETRIES = 3
 
+SR_PREFIX = 'sr:pg:'
+GDS_PREFIX = 'gds:'
+SRA_PREFIX = 'sra:'
+GSM_PREFIX = 'gsm'
+
+
 def run_sample(download_path, s3_prefix):
 	''' Example:
 	   run_sample("/sra/sra-instant/reads/ByStudy/sra/SRP/SRP055/SRP055440//SRR1813952/SRR1813952.sra"
@@ -86,13 +92,26 @@ def run_sample(download_path, s3_prefix):
 	output = subprocess.check_output(command, shell=True)
 	print output
 	'''
+def output_gsm_mapping_for_doc_id(doc_id, output_file):
+	gsm_map = json.loads(REDIS_STORE.get(GSM_PREFIX + doc_id) or "{}")
+	with open(output_file, "w") as out_f:
+		for key, val in gsm_map.iteritems():
+			out_f.write("%s,%s\n" % (key, val))
 
 def run(doc_id, num_partitions, partition_id):
 	print "Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id)
 	file_list = json.loads(REDIS_STORE.get('sra:' + doc_id) or "[]")
 	idx = 0
-	if partition_id == 0: # Download FTP meta data
-		doc_info = json.loads(REDIS_STORE.get('gds:' + doc_id) or "{}")
+	if partition_id == 0: 
+                # copy srr => gsm mapping to 
+		output_gsm_mapping_for_doc_id(doc_id, '/mnt/srr_to_gsm.csv')
+		s3_dest = S3_BUCKET + '/' + doc_id + '/metadata/' 
+		command = "aws s3 cp %s  %s" % ('/mnt/srr_to_gsm.csv', s3_dest)
+		print command
+		output = subprocess.check_output(command, shell=True)
+
+                # Download FTP meta data
+		doc_info = json.loads(REDIS_STORE.get(GDS_PREFIX + doc_id) or "{}")
 		meta_data_link = doc_info['FTPLink']
 		if meta_data_link:
 			download_url = meta_data_link + '/soft/' + doc_info['Accession'] + '_family.soft.gz'
@@ -135,15 +154,19 @@ def main():
 	command = "mkdir -p /mnt/redis; aws s3 cp %s /mnt/redis/" % rdb_s3_path
 	print command
 	throw_away = subprocess.check_output(command, shell = True)
+	global REDIS_PORT
+	REDIS_PORT = int(os.environ['REDIS_PORT'])
+	global REDIS_STORE
+	REDIS_STORE = redis.StrictRedis(host='localhost', port=REDIS_PORT, db=2)
 
 	subprocess.Popen("cd /mnt/redis/; gunzip -f dump.rdb.gz; redis-server --port %d" % REDIS_PORT, shell=True)
 	time.sleep(10)
 
-	doc_id = os.environ['GDS_ID']
+	doc_ids = os.environ['GDS_IDS'].split(",")
 	num_partitions = int(os.environ['NUM_PARTITIONS'])
 	partition_id = int(os.environ['PARTITION_ID'])
-		
-	run(doc_id, num_partitions, partition_id)
+        for doc_id in doc_ids:
+	    run(doc_id, num_partitions, partition_id)
 
 
 
