@@ -23,18 +23,16 @@ def get_srr_gsm_mapping(doc_id):
     ''' TODO(yf): This doesn't work. Fix '''
     # Downalod the data
     output = {}
-    s3_dir = S3_BUCKET + '/' + doc_id + '/metadata/'
-    command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ --recursive --exclude '*' --include '*.soft.gz'" % (doc_id, s3_dir, doc_id)
+    s3_source = S3_BUCKET + '/' + doc_id + '/metadata/srr_to_gsm.csv'
+    command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ " % (doc_id, s3_source, doc_id)
     print command
     x = subprocess.check_output(command, shell=True)
-    accession_file = subprocess.check_output("ls _tmp/%s/*%s*.soft.gz" % (doc_id, doc_id[-5:]), shell=True).rstrip()  
-    gse = GEOparse.get_GEO(filepath=accession_file)
-    for gsm_id, gsm_obj in gse.gsms.iteritems():
-        sra_url = gsm_obj.metadata['relation'][1]
-        m = re.match(".*term=(.*)", sra_url)
-        if m: 
-            srr = m.group(1)
-            output[srr] = gsm_id
+    
+    local_file = "_tmp/%s/srr_to_gsm.csv" % doc_id
+    with open(local_file, 'rb') as csvfile:
+        csvr = csv.reader(csvfile, delimiter=',')
+        for row in csvr:
+            output[row[0]] = row[1] 
     #print output
     return output
     
@@ -91,14 +89,11 @@ def generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table):
         cell_info= {'data':cell_data, 'srr_id': '', 'gsm_id': ''}
         if m:
             cell_info['srr_id'] = m.group(1)
-            #try:
-            #    cell_info['gsm_id'] = srr_to_gsm_map[m.group(1)]
-            #except Exception: 
-            #    print "Couldn't find gsm mapping for %s." % cell_info['srr_id']
+            cell_info['gsm_id'] = srr_to_gsm_map.get(m.group(1)) or ''
         cells.append(cell_info)
     return cells
 
-def output_logfiles_to_csv(log_list, log_csv):      
+def output_logfiles_to_csv(log_list, log_csv, srr_gsm_map):      
     cells = []
     headers = []
     first_file = True
@@ -119,6 +114,7 @@ def output_logfiles_to_csv(log_list, log_csv):
         cell_info= {'data':cell_data, 'srr_id': '', 'gsm_id': ''}
         if m:
             cell_info['srr_id'] = m.group(1)
+            cell_info['gsm_id'] = srr_gsm_map.get(m.group(1)) or ''
         cells.append(cell_info)
     with open(log_csv, 'wb') as csvfile:
         gc_writer = csv.writer(csvfile, delimiter=',')
@@ -127,10 +123,10 @@ def output_logfiles_to_csv(log_list, log_csv):
             header_row.append(cell['srr_id'])
         gc_writer.writerow(header_row)
 
-        #header_row = ['GENENAME']
-	#for cell in gene_cell_table:
-        #    header_row.append(cell['gsm_id'])
-        #gc_writer.writerow(header_row)
+        header_row = ['GENENAME']
+	for cell in cells:
+            header_row.append(cell['gsm_id'])
+        gc_writer.writerow(header_row)
 	# write actual data
         for idx in range(len(headers)):
             row = [headers[idx]]
@@ -146,10 +142,10 @@ def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
             header_row.append(cell['srr_id'])
         gc_writer.writerow(header_row)
 
-        #header_row = ['GENENAME']
-	#for cell in gene_cell_table:
-        #    header_row.append(cell['gsm_id'])
-        #gc_writer.writerow(header_row)
+        header_row = ['GENENAME']
+	for cell in gene_cell_table:
+            header_row.append(cell['gsm_id'])
+        gc_writer.writerow(header_row)
 	# write actual data
         for gene in sorted(gene_to_idx_table.keys()):
             row = [gene]
@@ -188,7 +184,7 @@ def main():
             print "No htseq files for %s in %s" % (doc_id, S3_BUCKET + '/' + doc_id + '/results/')
 
         if len(log_list) > 0:
-            output_logfiles_to_csv(log_list, results.log_csv)      
+            output_logfiles_to_csv(log_list, results.log_csv, srr_to_gsm_map)      
         else:
             print "No log files for %s in %s" % (doc_id, S3_BUCKET + '/' + doc_id + '/results/')
 
