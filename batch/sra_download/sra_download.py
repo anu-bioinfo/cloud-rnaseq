@@ -38,6 +38,12 @@ def run_sample(download_path, s3_prefix):
 	subprocess.check_output("mkdir -p %s" % DEST_DIR + 'rawdata/', shell=True)
 	filename = os.path.basename(download_path)
 	sample_name = os.path.splitext(filename)[0]
+	# Check if sample in in the GSM hash 
+	doc_id = s3_prefix
+	gsm_mapping = json.loads(REDIS_STORE.get(GSM_PREFIX + doc_id) or "{}")
+	if len(gsm_mapping) > 0 and not gsm_mapping[sample_name]:
+		print "%s is not in the gsm mapping hash for doc %s" % (sample_name, doc_id)
+		return
 	dest_file = DEST_DIR + 'rawdata/' + filename
 	done_file = DEST_DIR + 'rawdata/' + sample_name + '.done'
 	download_url = FTP_HOST + download_path
