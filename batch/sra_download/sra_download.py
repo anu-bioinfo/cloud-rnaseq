@@ -41,7 +41,7 @@ def run_sample(download_path, s3_prefix):
 	# Check if sample in in the GSM hash 
 	doc_id = s3_prefix
 	gsm_mapping = json.loads(REDIS_STORE.get(GSM_PREFIX + doc_id) or "{}")
-	if len(gsm_mapping) > 0 and not gsm_mapping[sample_name]:
+	if len(gsm_mapping) > 0 and not gsm_mapping.get(sample_name):
 		print "%s is not in the gsm mapping hash for doc %s" % (sample_name, doc_id)
 		return
 	dest_file = DEST_DIR + 'rawdata/' + filename
