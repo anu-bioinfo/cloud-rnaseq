@@ -31,7 +31,7 @@ SRA_PREFIX = 'sra:'
 GSM_PREFIX = 'gsm'
 
 
-def run_sample(download_path, s3_prefix):
+def run_sample(download_path, s3_prefix, force_download = False):
 	''' Example:
 	   run_sample("/sra/sra-instant/reads/ByStudy/sra/SRP/SRP055/SRP055440//SRR1813952/SRR1813952.sra"
 	'''
@@ -44,6 +44,17 @@ def run_sample(download_path, s3_prefix):
 	if len(gsm_mapping) > 0 and not gsm_mapping.get(sample_name):
 		print "%s is not in the gsm mapping hash for doc %s" % (sample_name, doc_id)
 		return
+
+	if not force_download:
+		# check if file has been downloaded
+		s3_dest = S3_BUCKET + '/' + s3_prefix + '/rawdata/' 
+		command = "aws s3 ls %s | grep %s" % (s3_dest, sample_name)
+		print command
+		output = subprocess.check_output(command, shell=True)
+		if len(output) > 8:
+			# sample has been downloaded before
+			return 
+
 	dest_file = DEST_DIR + 'rawdata/' + filename
 	done_file = DEST_DIR + 'rawdata/' + sample_name + '.done'
 	download_url = FTP_HOST + download_path
