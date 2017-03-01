@@ -14,8 +14,6 @@ import re
 
 ''' REDIS DB can be downloaded at s3://czsi-sra-config/dataset_info/dump.rdb.gz'''
 
-REDIS_PORT = 7777
-REDIS_STORE = redis.StrictRedis(host='localhost', port=REDIS_PORT, db=2)
 FTP_HOST = "ftp://ftp-trace.ncbi.nlm.nih.gov"
 DEST_DIR = "/mnt/data/hca/"
 WGET = '/usr/bin/wget '
@@ -43,6 +41,7 @@ COMMON_PARS="--runThreadN 12 --outFilterType BySJout \
 --outSAMstrandField intronMotif \
 --outSAMtype BAM Unsorted \
 --outSAMattributes NH HI NM MD \
+--genomeLoad LoadAndKeep \
 --readFilesCommand zcat"
 
 
@@ -70,7 +69,8 @@ def run_sample(sample_name, doc_id):
 		print "Empty reads for %s" % s3_source
 		return
 	command = "cd %s/results; mkdir -p Pass1; cd Pass1;" % dest_dir
-	command += STAR + ' ' + COMMON_PARS + ' --genomeDir ' + GENOME_DIR + ' --sjdbGTFfile ' + SJDB_GTF + ' --readFilesIn ' + reads
+	#command += STAR + ' ' + COMMON_PARS + ' --genomeDir ' + GENOME_DIR + ' --sjdbGTFfile ' + SJDB_GTF + ' --readFilesIn ' + reads
+	command += STAR + ' ' + COMMON_PARS + ' --genomeDir ' + GENOME_DIR + ' --readFilesIn ' + reads
 	print command
 	sys.stdout.flush()
 	output = subprocess.check_output(command, shell=True)
@@ -146,6 +146,7 @@ def main():
 	partition_id = int(os.environ['PARTITION_ID'])
 
 	# download the genome data
+	
 	command = "mkdir -p /mnt/genome; aws s3 cp s3://czi-hca/ref-genome/hg38-plus.tgz /mnt/genome"
 	print command
 	subprocess.check_output(command, shell=True)
@@ -161,10 +162,21 @@ def main():
 	command = "cd /mnt/genome/STAR; tar xvfz HG38-PLUS.tgz"
 	print command
 	subprocess.check_output(command, shell=True)
+	
 
 	sys.stdout.flush()
+	
+	# Load Genome
+	command = "%s --genomeDir %s --genomeLoad LoadAndExit" % (STAR, GENOME_DIR)
+	print command
+	subprocess.check_output(command, shell=True)
+
 	# run through the samples
 	run(doc_id, num_partitions, partition_id)
+	# Remove Genome
+	command = "%s --genomeDir %s --genomeLoad Remove" % (STAR, GENOME_DIR)
+	print command
+	subprocess.check_output(command, shell=True)
 
 
 if __name__ == "__main__":
