@@ -140,10 +140,6 @@ def run(doc_id, num_partitions, partition_id):
 
 
 def main():
-	# copy the redis database and start the redis-server
-	doc_id = os.environ['GDS_ID']
-	num_partitions = int(os.environ['NUM_PARTITIONS'])
-	partition_id = int(os.environ['PARTITION_ID'])
 
 	# download the genome data
 	
@@ -166,14 +162,19 @@ def main():
 
 	sys.stdout.flush()
 	
-	# Load Genome
+	# Load Genome Into Memory
 	command = "%s --genomeDir %s --genomeLoad LoadAndExit" % (STAR, GENOME_DIR)
 	print command
 	subprocess.check_output(command, shell=True)
 
 	# run through the samples
-	run(doc_id, num_partitions, partition_id)
-	# Remove Genome
+	num_partitions = int(os.environ['NUM_PARTITIONS'])
+	partition_id = int(os.environ['PARTITION_ID'])
+	doc_ids = os.environ['GDS_IDS'].split(",")
+	for doc_id in doc_ids:
+		run(doc_id, num_partitions, partition_id)
+
+	# Remove Genome Into Memory
 	command = "%s --genomeDir %s --genomeLoad Remove" % (STAR, GENOME_DIR)
 	print command
 	subprocess.check_output(command, shell=True)
