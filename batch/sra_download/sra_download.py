@@ -50,10 +50,14 @@ def run_sample(download_path, s3_prefix, force_download = False):
 		s3_dest = S3_BUCKET + '/' + s3_prefix + '/rawdata/' 
 		command = "aws s3 ls %s | grep %s" % (s3_dest, sample_name)
 		print command
-		output = subprocess.check_output(command, shell=True)
-		if len(output) > 8:
-			# sample has been downloaded before
-			return 
+		try:
+			output = subprocess.check_output(command, shell=True)
+			if len(output) > 8:
+				# sample has been downloaded before
+				return 
+		except Exception:
+			# No big deal. S3 error
+			print "%s doesn't exist yet" % sample_name
 
 	dest_file = DEST_DIR + 'rawdata/' + filename
 	done_file = DEST_DIR + 'rawdata/' + sample_name + '.done'
@@ -151,16 +155,17 @@ def run(doc_id, num_partitions, partition_id):
 					sra_download_path = sra_item[1]
 					run_sample(sra_download_path, doc_id)
 					print "%s : %s " % (doc_id, sra_download_path)
-					time.sleep(5)
+					#time.sleep(5)
 					break
 				except subprocess.CalledProcessError as e:
 					if tries >= MAX_RETRIES:
 						print sra_download_path + " doesn't exist."
 						break;
 					else:
-						print "Error downloading %s. Retry in 5 seconds"
+						print "Error downloading %s. Retry in 5 seconds" % sra_download_path
 						time.sleep(30*tries)
 						tries += 1
+				
 				
 		idx += 1
 
