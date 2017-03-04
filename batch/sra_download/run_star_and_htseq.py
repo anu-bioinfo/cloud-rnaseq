@@ -42,6 +42,7 @@ COMMON_PARS="--runThreadN 12 --outFilterType BySJout \
 --outSAMtype BAM Unsorted \
 --outSAMattributes NH HI NM MD \
 --genomeLoad LoadAndKeep \
+--outReadsUnmapped Fastx \
 --readFilesCommand zcat"
 
 
@@ -75,14 +76,28 @@ def run_sample(sample_name, doc_id):
 	sys.stdout.flush()
 	output = subprocess.check_output(command, shell=True)
 	# running sam tools
-	command = "cd %s/results; %s sort -n -m 6000000000 -o ./Pass1/Aligned.out.sorted.bam ./Pass1/Aligned.out.bam" % (dest_dir, SAMTOOLS)
+	command = "cd %s/results; %s sort -m 6000000000 -o ./Pass1/Aligned.out.sorted.bam ./Pass1/Aligned.out.bam" % (dest_dir, SAMTOOLS)
+	print command
+	output = subprocess.check_output(command, shell=True)
+	print output
+	sys.stdout.flush()
+	
+	# running samtools index -b
+	command = "cd %s/results/Pass1; %s index -b Aligned.out.sorted.bam " % (dest_dir, SAMTOOLS)
 	print command
 	output = subprocess.check_output(command, shell=True)
 	print output
 	sys.stdout.flush()
 
+	# remove unsorted bam files 
+	command = "cd %s/results/Pass1; rm -rf Aligned.out.bam " % (dest_dir)
+	print command
+	output = subprocess.check_output(command, shell=True)
+	print output
+	sys.stdout.flush()
+	
 	# running htseq
-	command = "cd %s/results; %s -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted.bam  %s > htseq-count.txt" % (dest_dir, HTSEQ, SJDB_GTF)
+	command = "cd %s/results; %s -r pos -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted.bam  %s > htseq-count.txt" % (dest_dir, HTSEQ, SJDB_GTF)
 	print command
 	output = subprocess.check_output(command, shell=True)
 
@@ -112,7 +127,6 @@ def run_sample(sample_name, doc_id):
 
 	sys.stdout.flush()
 	
-	
 
 def run(doc_id, num_partitions, partition_id):
 	print "Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id)
@@ -141,21 +155,40 @@ def run(doc_id, num_partitions, partition_id):
 
 def main():
 
+	global GENOME_DIR
+	global GENOME_FASTA
+	global SJDB_GTF
+
+	GENOME_DIR="/mnt/genome/STAR/HG38-PLUS/" # change
+	GENOME_FASTA="/mnt/genome/hg38-plus/hg38-plus.fa" # change
+	SJDB_GTF="/mnt/genome/hg38-plus/hg38-plus.gtf" # change
+
+	ref_genome_file = 'hg38-plus.tgz'
+	ref_genome_star_file = 'HG38-PLUS.tgz'
+
+	taxon   = os.environ['TAXON']
+	if taxon == 'mus':
+		GENOME_DIR="/mnt/genome/STAR/MM10-PLUS/"
+		GENOME_FASTA="/mnt/genome/mm10-plus/mm10-plus.fa" # change
+		SJDB_GTF="/mnt/genome/mm10-plus/mm10-plus.gtf" # change
+		ref_genome_file = 'mm10-plus.tgz'
+		ref_genome_star_file = 'MM10-PLUS.tgz'
+
 	# download the genome data
 	
-	command = "mkdir -p /mnt/genome; aws s3 cp s3://czi-hca/ref-genome/hg38-plus.tgz /mnt/genome"
+	command = "mkdir -p /mnt/genome; aws s3 cp s3://czi-hca/ref-genome/%s /mnt/genome" % ref_genome_file
 	print command
 	subprocess.check_output(command, shell=True)
 
-	command = "cd /mnt/genome; tar xvfz hg38-plus.tgz"
+	command = "cd /mnt/genome; tar xvfz %s " % ref_genome_file
 	print command
 	subprocess.check_output(command, shell=True)
 
-	command = "mkdir -p /mnt/genome/STAR; aws s3 cp s3://czi-hca/ref-genome/STAR/HG38-PLUS.tgz /mnt/genome/STAR"
+	command = "mkdir -p /mnt/genome/STAR; aws s3 cp s3://czi-hca/ref-genome/STAR/%s /mnt/genome/STAR" % ref_genome_star_file
 	print command
 	subprocess.check_output(command, shell=True)
 
-	command = "cd /mnt/genome/STAR; tar xvfz HG38-PLUS.tgz"
+	command = "cd /mnt/genome/STAR; tar xvfz %s" % ref_genome_star_file
 	print command
 	subprocess.check_output(command, shell=True)
 	
