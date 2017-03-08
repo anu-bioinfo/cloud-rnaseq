@@ -50,12 +50,30 @@ COMMON_PARS="--runThreadN 12 --outFilterType BySJout \
 --readFilesCommand zcat"
 
 HTSEQ_THREADS_MAX = 6
+CURR_MIN_VER = 20170301
 
-
-def run_sample(sample_name, doc_id):
+def run_sample(sample_name, doc_id, force_download = False):
 	''' Example:
 	   run_sample(SRR1974579, 200067835)
 	'''
+
+
+	# Check if star has been run
+	if not force_download:
+		s3_dest = S3_BUCKET + '/' + doc_id + '/results/'
+		command = "aws s3 ls %s | grep %s.htseq" % (s3_dest, sample_name)
+                print command
+		try:
+			output = subprocess.check_output(command, shell=True)
+			if len(output) > 10:
+				# sample has been downloaded before
+				dateint = int(output[0:10].replace('-', ''))
+				if dateint > CURR_MIN_VER:
+					return
+		except Exception:
+			# No big deal. S3 error
+			print "%s doesn't exist yet" % sample_name
+		
 	dest_dir = DEST_DIR + sample_name
 	subprocess.check_output("mkdir -p %s" % dest_dir, shell=True)
 	subprocess.check_output("mkdir -p %s/rawdata" % dest_dir, shell=True)
@@ -231,7 +249,7 @@ def main():
 	print command
 	subprocess.check_output(command, shell=True)
 	
-
+	
 	sys.stdout.flush()
 	
 	# Load Genome Into Memory
