@@ -101,5 +101,5 @@ The output htseq-count file would be in  ```<OUT_HTSEQ_CSV>``` and the STAR logs
 
 ## NCBI SRA Pipeline
 
-Coming soon~~~
+Documentation coming soon~~~
 
