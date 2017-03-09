@@ -86,7 +86,7 @@ See the [aegea documentation](https://github.com/kislyuk/aegea) for more info.
 Once all the jobs are done, you can generate the gene-cell table as follows: 
 
 ```
-cd hca/geo_metadata/; ./generate_gene_cell_table.py -s <S3_BUCKET> -d <EXPERIMENT_ID> -f <OUT_HTSEQ_CSV> -l <OUT_LOG_CSV> 
+cd hca/geo_meta/; ./generate_gene_cell_table.py -s <S3_BUCKET> -d <EXPERIMENT_ID> -f <OUT_HTSEQ_CSV> -l <OUT_LOG_CSV> 
 
 ```
 
