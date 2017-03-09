@@ -96,6 +96,8 @@ cd hca/geo_meta/; ./generate_gene_cell_table.py -s <S3_BUCKET> -d <EXPERIMENT_ID
 
 The output htseq-count file would be in  ```<OUT_HTSEQ_CSV>``` and the STAR logs would be in ```<OUT_LOG_CSV>```. 
 
+### Notes 
+  This pipeline doesn't work with 10X genomics data (yet). 
 
 ## NCBI SRA Pipeline
 
