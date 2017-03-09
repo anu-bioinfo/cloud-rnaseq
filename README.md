@@ -82,6 +82,10 @@ You can also watch individual jobs by typing:
 ```aegea batch watch <job_id>```
 
 See the [aegea documentation](https://github.com/kislyuk/aegea) for more info. 
+
+The results will be accessible under ```<S3_BUCKET>/<EXPERIMENT_ID>/results/``` once the pipeline is successfuly run. 
+
+
 ### Generating the gene-cell table
 Once all the jobs are done, you can generate the gene-cell table as follows: 
 
