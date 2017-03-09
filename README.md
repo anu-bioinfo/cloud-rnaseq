@@ -13,8 +13,8 @@ r everyone through Amazon S3.
 
 ## AWS STAR
 ### Data Requirements
-  In order to use our tools,  you need to have AWS S3 access and have all your data under a primary S3 path (i.e. s3://czi-hca/data). Under this path, gzipped fastq files for a sample should be placed under 
-``` <S3_BUCKET>/<EXPERIMENT_ID>/rawdata/<SAMPLE_ID>/``` 
+  In order to use our tools,  you need to have AWS S3 access and have all your data under a primary S3 path (i.e. s3://czi-hca/data). Under this path, gzipped fastq files for a sample should be placed under ``` <S3_BUCKET>/<EXPERIMENT_ID>/rawdata/<SAMPLE_ID>/``` 
+
 ``` 
 ,where
     <S3_BUCKET>: the primary S3_PATH
@@ -36,6 +36,8 @@ cd aegea; make; make install; cd ..;
 git clone https://github.com/chanzuckerberg/hca.git
 cd hca/batch; make dockerimage;  cd ../..; 
 ```
+
+
 ### Running the pipeline
 After installation, here is how you run your pipeline. Right now we support two reference genomes hg38-plus (for homo sapiens) and mm10-plus (for mus musculus). The -plus part is the spiked ERCC RNA references so if you spike your data, you should be able to map those reads. You also have to decide how many jobs you want to run at the same time. If you have 400 samples and 10 jobs, each job would run through 40 samples. 
 
@@ -67,6 +69,7 @@ sleep 100
 aegea batch submit --execute sra_download/run_star_and_htseq.py --storage /mnt=500 --ecr-image sra_download --environment S3_BUCKET=s3://czi-hca/data EXP_IDS=200067835,200057832 NUM_PARTITIONS=3 TAXON=homo PARTITION_ID=2 --memory 64000
 sleep 100
 ```
+
 
 Save the script and then run it under the ```hca/batch``` directory. This would launch a bunch of AWS batch jobs after a few minutes. 
 
