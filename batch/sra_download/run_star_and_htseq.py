@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import argparse
 import subprocess
 import os
@@ -15,13 +15,7 @@ import re
 import threading
 
 
-
-''' REDIS DB can be downloaded at s3://czsi-sra-config/dataset_info/dump.rdb.gz'''
-
-FTP_HOST = "ftp://ftp-trace.ncbi.nlm.nih.gov"
 DEST_DIR = "/mnt/data/hca/"
-WGET = '/usr/bin/wget '
-MIN_FILE_SIZE = 5000
 S3_BUCKET = 's3://czi-hca/data'
 
 
@@ -258,9 +252,12 @@ def main():
 	subprocess.check_output(command, shell=True)
 
 	# run through the samples
+	global S3_BUCKET
+	S3_BUCKET = os.environ['S3_BUCKET']
+
 	num_partitions = int(os.environ['NUM_PARTITIONS'])
 	partition_id = int(os.environ['PARTITION_ID'])
-	doc_ids = os.environ['GDS_IDS'].split(",")
+	doc_ids = os.environ['EXP_IDS'].split(",")
 	run(doc_ids, num_partitions, partition_id)
 
 	# Remove Genome Into Memory

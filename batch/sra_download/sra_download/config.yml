@@ -24,6 +24,6 @@ build_image:
       - "gdebi --non-interactive redis-server_3.2.1-1_amd64.deb"
       - "curl -L https://sourceforge.net/projects/samtools/files/samtools/1.3/samtools-1.3.tar.bz2/download > samtools-1.3.tar.bz2"
       - " tar xjf samtools-1.3.tar.bz2; cd samtools-1.3; make; make install; samtools --version"
-      - "curl -L https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz > sra_tools.tar.gz"
-      - " tar xvfz sra_tools.tar.gz; cd sratoolkit.2.8.1-3-ubuntu64/; mv bin/* /usr/local/bin/;" 
+      - "curl -L http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.8.2/sratoolkit.2.8.2-ubuntu64.tar.gz > sra_tools.tar.gz"
+      - " tar xvfz sra_tools.tar.gz; cd sratoolkit.2.8.2-ubuntu64/; mv bin/* /usr/local/bin/;" 
 
