@@ -83,7 +83,7 @@ You can also watch individual jobs by typing:
 
 See the [aegea documentation](https://github.com/kislyuk/aegea) for more info. 
 
-The results will be accessible under ```<S3_BUCKET>/<EXPERIMENT_ID>/results/``` once the pipeline is successfuly run. 
+The results will be accessible under ```<S3_BUCKET>/<EXPERIMENT_ID>/results/``` once the pipeline is successfuly run. Each sample would generate a <SAMPLE_ID>.tgz under this directory. The .tgz file includes the htseq-count output, the unmapped reads and the sorted BAM file.
 
 
 ### Generating the gene-cell table
