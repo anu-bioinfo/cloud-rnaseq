@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import json
 import time
 import os
@@ -159,6 +159,7 @@ def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
 def main():
     parser = argparse.ArgumentParser(
         description='Generate gene cell table')
+    parser.add_argument('-s', action="store", dest='s3_path', default=False)
     parser.add_argument('-d', action="store", dest='gds_id', default=False)
     parser.add_argument('-f', action="store", dest='output_csv', default=False)
     parser.add_argument('-l', action="store", dest='log_csv', default=False)
@@ -167,6 +168,9 @@ def main():
         doc_id = results.gds_id
 	htseq_list = get_htseq_files_from_s3(doc_id)
         log_list = get_log_files_from_s3(doc_id)
+	global S3_BUCKET
+	if results.s3_path:
+		S3_BUCKET=results.s3_path
 
         # creating a temp work space
         command = "mkdir -p _tmp/%s" % doc_id
