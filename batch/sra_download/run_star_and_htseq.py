@@ -12,6 +12,10 @@ import json
 import redis
 import re
 
+import threading
+
+
+
 ''' REDIS DB can be downloaded at s3://czsi-sra-config/dataset_info/dump.rdb.gz'''
 
 FTP_HOST = "ftp://ftp-trace.ncbi.nlm.nih.gov"
@@ -45,11 +49,31 @@ COMMON_PARS="--runThreadN 12 --outFilterType BySJout \
 --outReadsUnmapped Fastx \
 --readFilesCommand zcat"
 
+HTSEQ_THREADS_MAX = 6
+CURR_MIN_VER = 20170301
 
-def run_sample(sample_name, doc_id):
+def run_sample(sample_name, doc_id, force_download = False):
 	''' Example:
 	   run_sample(SRR1974579, 200067835)
 	'''
+
+
+	# Check if star has been run
+	if not force_download:
+		s3_dest = S3_BUCKET + '/' + doc_id + '/results/'
+		command = "aws s3 ls %s | grep %s.htseq" % (s3_dest, sample_name)
+                print command
+		try:
+			output = subprocess.check_output(command, shell=True)
+			if len(output) > 10:
+				# sample has been downloaded before
+				dateint = int(output[0:10].replace('-', ''))
+				if dateint > CURR_MIN_VER:
+					return
+		except Exception:
+			# No big deal. S3 error
+			print "%s doesn't exist yet" % sample_name
+		
 	dest_dir = DEST_DIR + sample_name
 	subprocess.check_output("mkdir -p %s" % dest_dir, shell=True)
 	subprocess.check_output("mkdir -p %s/rawdata" % dest_dir, shell=True)
@@ -96,61 +120,94 @@ def run_sample(sample_name, doc_id):
 	print output
 	sys.stdout.flush()
 	
-	# running htseq
-	command = "cd %s/results; %s -r pos -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted.bam  %s > htseq-count.txt" % (dest_dir, HTSEQ, SJDB_GTF)
-	print command
-	output = subprocess.check_output(command, shell=True)
+	# ready to be htseq-ed and cleaned up
+	return { 'doc_id': doc_id, 'sample_name': sample_name, 'dest_dir': dest_dir}
 
-	# compressed the results dir and move it to s3
-	command = "cd %s; tar cvfz %s.tgz results" % (dest_dir, sample_name)
-	print command
-	output = subprocess.check_output(command, shell=True)
 
-	# copy htseq and log files out to s3
-	s3_dest = S3_BUCKET + '/' + doc_id + '/results/'
-	command = "aws s3 cp %s/%s.tgz %s" % (dest_dir, sample_name, s3_dest)
-	print command
-	subprocess.check_output(command, shell=True)
+class htseqThread(threading.Thread):
+	def __init__(self, htseqParams):
+		threading.Thread.__init__(self)
+		self.htseqParams = htseqParams
 
-	command = "aws s3 cp %s/results/htseq-count.txt %s%s.htseq-count.txt" % (dest_dir, s3_dest, sample_name)
-	print command
-	subprocess.check_output(command, shell=True)
+	def run(self):
+		doc_id = self.htseqParams['doc_id']
+		sample_name = self.htseqParams['sample_name']
+		dest_dir = self.htseqParams['dest_dir']
 
-	command = "aws s3 cp %s/results/Pass1/Log.final.out %s%s.log.final.out" % (dest_dir, s3_dest, sample_name)
-	print command
-	subprocess.check_output(command, shell=True)
+		# running htseq
+		command = "cd %s/results; %s -r pos -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted.bam  %s > htseq-count.txt" % (dest_dir, HTSEQ, SJDB_GTF)
+		print command
+		output = subprocess.check_output(command, shell=True)
 
-	# rm all the files
-	command = "rm -rf %s" % dest_dir
-	print command
-	subprocess.check_output(command, shell=True)
+		# compressed the results dir and move it to s3
+		command = "cd %s; tar cvfz %s.tgz results" % (dest_dir, sample_name)
+		print command
+		output = subprocess.check_output(command, shell=True)
 
-	sys.stdout.flush()
-	
+		# copy htseq and log files out to s3
+		s3_dest = S3_BUCKET + '/' + doc_id + '/results/'
+		command = "aws s3 cp %s/%s.tgz %s" % (dest_dir, sample_name, s3_dest)
+		print command
+		subprocess.check_output(command, shell=True)
 
-def run(doc_id, num_partitions, partition_id):
-	print "Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id)
-	command = "aws s3 ls %s/%s/rawdata/" % (S3_BUCKET, doc_id)
-	print command
-	output = subprocess.check_output(command, shell=True).split("\n")
-	sample_list = []
-	
-	for f in output:
-		matched = re.search("\s([\d\w]+)\/",f)
-		if matched: 
-			sample_list.append(matched.group(1))
-	idx = 0
-	for sample_name in sample_list:
-		if idx % num_partitions == partition_id:
-			try:
-				run_sample(sample_name, doc_id)
-				print "%s : %s " % (doc_id, sample_name)
-			except subprocess.CalledProcessError, e:
-    				print "Ping stdout output: %s for sample %s\n" % (e.output, sample_name)
-			except Exception:
-				print "Error processing %s. Retry in 5 seconds" % sample_name
-				
-		idx += 1
+		command = "aws s3 cp %s/results/htseq-count.txt %s%s.htseq-count.txt" % (dest_dir, s3_dest, sample_name)
+		print command
+		subprocess.check_output(command, shell=True)
+
+		command = "aws s3 cp %s/results/Pass1/Log.final.out %s%s.log.final.out" % (dest_dir, s3_dest, sample_name)
+		print command
+		subprocess.check_output(command, shell=True)
+
+		# rm all the files
+		command = "rm -rf %s" % dest_dir
+		print command
+		subprocess.check_output(command, shell=True)
+
+		sys.stdout.flush()
+
+def runHtseq(htseq_jobs):
+	threads = []
+	for htseqParams in htseq_jobs:
+		print "Starting a htseq thread for %s " % htseqParams
+		ht_thread = htseqThread(htseqParams)
+		ht_thread.start()
+		threads.append(ht_thread)
+	for t in threads:
+		t.join()	
+
+def run(doc_ids	, num_partitions, partition_id):
+	htseq_jobs = []
+	for doc_id in doc_ids:
+		print "Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id)
+		command = "aws s3 ls %s/%s/rawdata/" % (S3_BUCKET, doc_id)
+		print command
+		output = subprocess.check_output(command, shell=True).split("\n")
+		sample_list = []
+		
+		for f in output:
+			matched = re.search("\s([\d\w]+)\/",f)
+			if matched: 
+				sample_list.append(matched.group(1))
+		idx = 0
+		for sample_name in sample_list:
+			if idx % num_partitions == partition_id:
+				try:
+				#if True:
+					ret = run_sample(sample_name, doc_id)
+					print "%s : %s " % (doc_id, sample_name)
+					if ret is not None:
+						htseq_jobs.append(ret)
+					if len(htseq_jobs) >= HTSEQ_THREADS_MAX:
+						runHtseq(htseq_jobs)
+						htseq_jobs = []
+
+				except subprocess.CalledProcessError, e:
+					print "Error processing stdout output: %s for sample %s\n" % (e.output, sample_name)
+				except Exception:
+					print "Error processing %s. " % sample_name
+					
+			idx += 1
+	runHtseq(htseq_jobs)
 
 
 def main():
@@ -192,7 +249,7 @@ def main():
 	print command
 	subprocess.check_output(command, shell=True)
 	
-
+	
 	sys.stdout.flush()
 	
 	# Load Genome Into Memory
@@ -204,8 +261,7 @@ def main():
 	num_partitions = int(os.environ['NUM_PARTITIONS'])
 	partition_id = int(os.environ['PARTITION_ID'])
 	doc_ids = os.environ['GDS_IDS'].split(",")
-	for doc_id in doc_ids:
-		run(doc_id, num_partitions, partition_id)
+	run(doc_ids, num_partitions, partition_id)
 
 	# Remove Genome Into Memory
 	command = "%s --genomeDir %s --genomeLoad Remove" % (STAR, GENOME_DIR)
