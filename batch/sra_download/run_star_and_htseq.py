@@ -67,7 +67,7 @@ def run_sample(sample_name, doc_id, force_download = False):
 		except Exception:
 			# No big deal. S3 error
 			print "%s doesn't exist yet" % sample_name
-		
+
 	dest_dir = DEST_DIR + sample_name
 	subprocess.check_output("mkdir -p %s" % dest_dir, shell=True)
 	subprocess.check_output("mkdir -p %s/rawdata" % dest_dir, shell=True)
@@ -75,7 +75,7 @@ def run_sample(sample_name, doc_id, force_download = False):
 
 	# copy fast.gz from s3 to local
 	s3_source = S3_BUCKET + '/' + doc_id + '/rawdata/' + sample_name + '/'
-	command = "aws s3 cp %s %s/rawdata/ --recursive --recursive --exclude '*' --include '*.fastq.gz'" % (s3_source, dest_dir) 
+	command = "aws s3 cp %s %s/rawdata/ --recursive --recursive --exclude '*' --include '*.fastq.gz'" % (s3_source, dest_dir)
 	print command
 	output = subprocess.check_output(command, shell=True)
 
@@ -99,7 +99,7 @@ def run_sample(sample_name, doc_id, force_download = False):
 	output = subprocess.check_output(command, shell=True)
 	print output
 	sys.stdout.flush()
-	
+
 	# running samtools index -b
 	command = "cd %s/results/Pass1; %s index -b Aligned.out.sorted.bam " % (dest_dir, SAMTOOLS)
 	print command
@@ -107,13 +107,13 @@ def run_sample(sample_name, doc_id, force_download = False):
 	print output
 	sys.stdout.flush()
 
-	# remove unsorted bam files 
+	# remove unsorted bam files
 	command = "cd %s/results/Pass1; rm -rf Aligned.out.bam " % (dest_dir)
 	print command
 	output = subprocess.check_output(command, shell=True)
 	print output
 	sys.stdout.flush()
-	
+
 	# ready to be htseq-ed and cleaned up
 	return { 'doc_id': doc_id, 'sample_name': sample_name, 'dest_dir': dest_dir}
 
@@ -167,7 +167,7 @@ def runHtseq(htseq_jobs):
 		ht_thread.start()
 		threads.append(ht_thread)
 	for t in threads:
-		t.join()	
+		t.join()
 
 def run(doc_ids	, num_partitions, partition_id):
 	htseq_jobs = []
@@ -177,10 +177,10 @@ def run(doc_ids	, num_partitions, partition_id):
 		print command
 		output = subprocess.check_output(command, shell=True).split("\n")
 		sample_list = []
-		
+
 		for f in output:
-			matched = re.search("\s([\d\w]+)\/",f)
-			if matched: 
+			matched = re.search("\s([\d\w\-\.]+)\/",f)
+			if matched:
 				sample_list.append(matched.group(1))
 		idx = 0
 		for sample_name in sample_list:
@@ -199,7 +199,7 @@ def run(doc_ids	, num_partitions, partition_id):
 					print "Error processing stdout output: %s for sample %s\n" % (e.output, sample_name)
 				except Exception:
 					print "Error processing %s. " % sample_name
-					
+
 			idx += 1
 	runHtseq(htseq_jobs)
 
@@ -226,7 +226,7 @@ def main():
 		ref_genome_star_file = 'MM10-PLUS.tgz'
 
 	# download the genome data
-	
+
 	command = "mkdir -p /mnt/genome; aws s3 cp s3://czi-hca/ref-genome/%s /mnt/genome" % ref_genome_file
 	print command
 	subprocess.check_output(command, shell=True)
@@ -242,10 +242,10 @@ def main():
 	command = "cd /mnt/genome/STAR; tar xvfz %s" % ref_genome_star_file
 	print command
 	subprocess.check_output(command, shell=True)
-	
-	
+
+
 	sys.stdout.flush()
-	
+
 	# Load Genome Into Memory
 	command = "%s --genomeDir %s --genomeLoad LoadAndExit" % (STAR, GENOME_DIR)
 	print command
