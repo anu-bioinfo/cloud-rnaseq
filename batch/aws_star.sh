@@ -17,7 +17,7 @@ TAXON=$4
 p=0
 while [ $p -lt $NUM_PA ]
 do
-  echo aegea batch submit --execute sra_download/run_star_and_htseq.py --storage /mnt=500 --ecr-image sra_download --environment S3_BUCKET=$S3_BUCKET EXP_IDS=$DOC_IDS NUM_PARTITIONS=$NUM_PA TAXON=$TAXON PARTITION_ID=$p --memory 64000 --vcpus 16
+  echo aegea batch submit --execute sra_download/run_star_and_htseq.py --storage /mnt=500 --ecr-image sra_download --environment S3_BUCKET=$S3_BUCKET EXP_IDS=$DOC_IDS NUM_PARTITIONS=$NUM_PA TAXON=$TAXON PARTITION_ID=$p --memory 64000 
   echo sleep 20
   p=$(( $p + 1))
 done
