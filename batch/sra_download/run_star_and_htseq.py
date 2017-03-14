@@ -26,6 +26,7 @@ SAMTOOLS="samtools"
 GENOME_DIR="/mnt/genome/STAR/HG38-PLUS/" # change
 GENOME_FASTA="/mnt/genome/hg38-plus/hg38-plus.fa" # change
 SJDB_GTF="/mnt/genome/hg38-plus/hg38-plus.gtf" # change
+TAXON="homo"
 
 COMMON_PARS="--runThreadN 12 --outFilterType BySJout \
 --outFilterMultimapNmax 20 \
@@ -134,21 +135,21 @@ class htseqThread(threading.Thread):
 		output = subprocess.check_output(command, shell=True)
 
 		# compressed the results dir and move it to s3
-		command = "cd %s; tar cvfz %s.tgz results" % (dest_dir, sample_name)
+		command = "cd %s; tar cvfz %s.%s.tgz results" % (dest_dir, sample_name, TAXON)
 		print command
 		output = subprocess.check_output(command, shell=True)
 
 		# copy htseq and log files out to s3
 		s3_dest = S3_BUCKET + '/' + doc_id + '/results/'
-		command = "aws s3 cp %s/%s.tgz %s" % (dest_dir, sample_name, s3_dest)
+		command = "aws s3 cp %s/%s.%s.tgz %s" % (dest_dir, sample_name, TAXON, s3_dest)
 		print command
 		subprocess.check_output(command, shell=True)
 
-		command = "aws s3 cp %s/results/htseq-count.txt %s%s.htseq-count.txt" % (dest_dir, s3_dest, sample_name)
+		command = "aws s3 cp %s/results/htseq-count.txt %s%s.%s.htseq-count.txt" % (dest_dir, s3_dest, sample_name, TAXON)
 		print command
 		subprocess.check_output(command, shell=True)
 
-		command = "aws s3 cp %s/results/Pass1/Log.final.out %s%s.log.final.out" % (dest_dir, s3_dest, sample_name)
+		command = "aws s3 cp %s/results/Pass1/Log.final.out %s%s.%s.log.final.out" % (dest_dir, s3_dest, sample_name, TAXON)
 		print command
 		subprocess.check_output(command, shell=True)
 
@@ -209,6 +210,7 @@ def main():
 	global GENOME_DIR
 	global GENOME_FASTA
 	global SJDB_GTF
+	global TAXON
 
 	GENOME_DIR="/mnt/genome/STAR/HG38-PLUS/" # change
 	GENOME_FASTA="/mnt/genome/hg38-plus/hg38-plus.fa" # change
@@ -224,6 +226,7 @@ def main():
 		SJDB_GTF="/mnt/genome/mm10-plus/mm10-plus.gtf" # change
 		ref_genome_file = 'mm10-plus.tgz'
 		ref_genome_star_file = 'MM10-PLUS.tgz'
+		TAXON = 'mus'
 
 	# download the genome data
 
