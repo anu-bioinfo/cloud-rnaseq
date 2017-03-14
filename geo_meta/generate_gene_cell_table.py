@@ -86,7 +86,7 @@ def generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table):
                 exp_cnt = fields[1]
                 idx = gene_to_idx_table[gene]
                 cell_data[idx] = exp_cnt
-        m = re.match(".*?([^\/\.]*)\.htseq-count.txt", htseq_file)
+        m = re.match(".*?([^\/ ]*)\.htseq-count.txt", htseq_file)
         cell_info= {'data':cell_data, 'srr_id': '', 'gsm_id': ''}
         if m:
             cell_info['srr_id'] = m.group(1)
@@ -111,7 +111,7 @@ def output_logfiles_to_csv(log_list, log_csv, srr_gsm_map):
                 else:
                     cell_data.append("")
         first_file = False
-        m = re.match(".*?([^\/\.]*)\.log.final.out", log_file)
+        m = re.match(".*?([^\/ ]*)\.log.final.out", log_file)
         cell_info= {'data':cell_data, 'srr_id': '', 'gsm_id': ''}
         if m:
             cell_info['srr_id'] = m.group(1)
