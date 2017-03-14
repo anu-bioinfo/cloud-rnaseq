@@ -56,7 +56,7 @@ def run_sample(sample_name, doc_id, force_download = False):
 	# Check if star has been run
 	if not force_download:
 		s3_dest = S3_BUCKET + '/' + doc_id + '/results/'
-		command = "aws s3 ls %s | grep %s.htseq" % (s3_dest, sample_name)
+		command = "aws s3 ls %s | grep %s.%s.htseq" % (s3_dest, sample_name, TAXON)
                 print command
 		try:
 			output = subprocess.check_output(command, shell=True)
