@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import json
 import time
 import os
@@ -180,7 +180,9 @@ def download_sra_urls(doc_list, force_download = False):
 def doc_list_to_file(doc_list, filename):
     with open(filename, 'w') as fd:
         for doc_id in doc_list:
-            fd.write("%s\n" % doc_id)
+            redis_key = 'gds:' + doc_id
+            rec = json.loads(REDIS_STORE.get(redis_key))
+            fd.write("%s,%s\n" % (doc_id, rec['taxon']))
 def doc_summary_to_file(doc_list, filename):
     with codecs.open(filename,'w', encoding='utf-8') as fd:
         idx = 1
