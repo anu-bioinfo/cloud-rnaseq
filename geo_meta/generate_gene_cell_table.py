@@ -39,7 +39,7 @@ def get_srr_gsm_mapping(doc_id):
 
 def get_htseq_files_from_s3(doc_id):
     s3_dir = S3_BUCKET + '/' + doc_id + '/results/'
-    command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ --recursive --exclude '*' --include '*.htseq-count.txt'" % (doc_id, s3_dir, doc_id)
+    command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ --recursive --exclude '*' --include '*.*.htseq-count.txt'" % (doc_id, s3_dir, doc_id)
     print command
     output = subprocess.check_output(command, shell=True)
 
@@ -52,7 +52,7 @@ def get_htseq_files_from_s3(doc_id):
 
 def get_log_files_from_s3(doc_id):
     s3_dir = S3_BUCKET + '/' + doc_id + '/results/'
-    command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ --recursive --exclude '*' --include '*.log.final.out'" % (doc_id, s3_dir, doc_id)
+    command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ --recursive --exclude '*' --include '*.*.log.final.out'" % (doc_id, s3_dir, doc_id)
     print command
     output = subprocess.check_output(command, shell=True)
 
@@ -86,10 +86,11 @@ def generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table):
                 exp_cnt = fields[1]
                 idx = gene_to_idx_table[gene]
                 cell_data[idx] = exp_cnt
-        m = re.match(".*?([^\/ ]*)\.htseq-count.txt", htseq_file)
-        cell_info= {'data':cell_data, 'srr_id': '', 'gsm_id': ''}
+        m = re.match(".*?([^\/ ]*)\.(.*)\.htseq-count.txt", htseq_file)
+        cell_info= {'data':cell_data, 'srr_id': '', 'gsm_id': '', 'taxon': ''}
         if m:
             cell_info['srr_id'] = m.group(1)
+            cell_info['taxon'] = m.group(2)
             cell_info['gsm_id'] = srr_to_gsm_map.get(m.group(1)) or ''
         cells.append(cell_info)
     return cells
@@ -111,24 +112,31 @@ def output_logfiles_to_csv(log_list, log_csv, srr_gsm_map):
                 else:
                     cell_data.append("")
         first_file = False
-        m = re.match(".*?([^\/ ]*)\.log.final.out", log_file)
-        cell_info= {'data':cell_data, 'srr_id': '', 'gsm_id': ''}
+        m = re.match(".*?([^\/ ]*)\.(.*)\.log.final.out", log_file)
+        cell_info= {'data':cell_data, 'srr_id': '', 'gsm_id': '', 'taxon': ''}
         if m:
             cell_info['srr_id'] = m.group(1)
+            cell_info['taxon'] = m.group(2)
             cell_info['gsm_id'] = srr_gsm_map.get(m.group(1)) or ''
         cells.append(cell_info)
     with open(log_csv, 'wb') as csvfile:
         gc_writer = csv.writer(csvfile, delimiter=',')
         header_row = ['FIELD_NAMES']
-	for cell in cells:
+        for cell in cells:
             header_row.append(cell['srr_id'])
         gc_writer.writerow(header_row)
 
-        header_row = ['GENENAME']
-	for cell in cells:
+        header_row = ['TAXON']
+        for cell in cells:
+            header_row.append(cell['taxon'])
+        gc_writer.writerow(header_row)
+
+        header_row = ['GSM']
+        for cell in cells:
             header_row.append(cell['gsm_id'])
         gc_writer.writerow(header_row)
-	# write actual data
+
+        # write actual data
         for idx in range(len(headers)):
             row = [headers[idx]]
             for cell in cells:
@@ -139,15 +147,20 @@ def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
     with open(csv_f, 'wb') as csvfile:
         gc_writer = csv.writer(csvfile, delimiter=',')
         header_row = ['GENENAME']
-	for cell in gene_cell_table:
+        for cell in gene_cell_table:
             header_row.append(cell['srr_id'])
         gc_writer.writerow(header_row)
 
-        header_row = ['GENENAME']
-	for cell in gene_cell_table:
+        header_row = ['TAXON']
+        for cell in gene_cell_table:
+            header_row.append(cell['taxon'])
+        gc_writer.writerow(header_row)
+
+        header_row = ['GSM']
+        for cell in gene_cell_table:
             header_row.append(cell['gsm_id'])
         gc_writer.writerow(header_row)
-	# write actual data
+        # write actual data
         for gene in sorted(gene_to_idx_table.keys()):
             row = [gene]
             idx = gene_to_idx_table[gene]
@@ -166,23 +179,23 @@ def main():
     results = parser.parse_args()
     if results.gds_id and results.output_csv and results.log_csv:
         doc_id = results.gds_id
-	htseq_list = get_htseq_files_from_s3(doc_id)
+        htseq_list = get_htseq_files_from_s3(doc_id)
         log_list = get_log_files_from_s3(doc_id)
-	global S3_BUCKET
-	if results.s3_path:
-		S3_BUCKET=results.s3_path
+
+        global S3_BUCKET
+        if results.s3_path:
+            S3_BUCKET=results.s3_path
 
         # creating a temp work space
         command = "mkdir -p _tmp/%s" % doc_id
         print command
         output = subprocess.check_output(command, shell=True)
 
-	if len(htseq_list) > 0:
-
+        if len(htseq_list) > 0:
             # start the mapping
-	    srr_to_gsm_map = get_srr_gsm_mapping(doc_id)
-	    gene_to_idx_table = get_gene_to_idx_mapping(htseq_list[0])
-	    gene_cell_table = generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table)
+            srr_to_gsm_map = get_srr_gsm_mapping(doc_id)
+            gene_to_idx_table = get_gene_to_idx_mapping(htseq_list[0])
+            gene_cell_table = generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table)
             output_htseq_to_csv(gene_cell_table, results.output_csv, gene_to_idx_table)
 
         else:
@@ -197,7 +210,6 @@ def main():
         command = "rm -rf _tmp/%s" % doc_id
         print command
         output = subprocess.check_output(command, shell=True)
-
     else:
         parser.print_help()
         sys.exit(1)
