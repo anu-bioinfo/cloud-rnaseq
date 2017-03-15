@@ -6,11 +6,15 @@ import subprocess
 
 def main():
 
-    parser = argparse.ArgumentParser(
-        description = "delete list of files listed in STDIN under the S3_PATH. \
-            Use -f flag to force delete from aws. otherwise, this just prints out command")
-    parser.add_argument('-s', action="store", dest='s3_path', default=False)
-    parser.add_argument('-f', action="store_true", dest='force', default=False)
+    description = "Delete list of files listed in STDIN under the S3_PATH.\n"
+    description += "Use -f flag to force delete from aws. otherwise, this just prints out command.\n"
+    description += "Example: \n"
+    description += "    'aws s3 ls s3://czi-hca/data/200057872/results/ |grep -v homo  | ./delete_from_s3.py -s s3://czi-hca/data/200057872/results'"
+    parser = argparse.ArgumentParser(description = description)
+    parser.add_argument('-s', action="store", dest='s3_path', default=False,
+        help="No trailing '/' ")
+    parser.add_argument('-f', action="store_true", dest='force', default=False,
+        help="force delete the files directly")
     results = parser.parse_args()
     if results.s3_path:
         count = 0
