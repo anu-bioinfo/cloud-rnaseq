@@ -45,7 +45,7 @@ COMMON_PARS="--outFilterType BySJout \
 --outReadsUnmapped Fastx \
 --readFilesCommand zcat"
 
-HTSEQ_THREADS_MAX = 6
+HTSEQ_THREADS_MAX = 10
 CURR_MIN_VER = 20170301
 
 def run_sample(sample_name, doc_id, force_download = False):
@@ -114,6 +114,13 @@ def run_sample(sample_name, doc_id, force_download = False):
     print command
     output = subprocess.check_output(command, shell=True)
     print output
+
+    # remove fastq files
+    command = "rm -rf %s/rawdata/*.fastq.gz" % dest_dir
+    print command
+    output = subprocess.check_output(command, shell=True)
+    print output
+
     sys.stdout.flush()
 
     # ready to be htseq-ed and cleaned up
@@ -250,6 +257,7 @@ def main():
     command = "cd /mnt/genome/STAR; tar xvfz %s" % ref_genome_star_file
     print command
     subprocess.check_output(command, shell=True)
+
 
     sys.stdout.flush()
 
