@@ -13,6 +13,7 @@ import redis
 import re
 
 import threading
+import multiprocessing
 
 
 DEST_DIR = "/mnt/data/hca/"
@@ -28,7 +29,7 @@ GENOME_FASTA="/mnt/genome/hg38-plus/hg38-plus.fa" # change
 SJDB_GTF="/mnt/genome/hg38-plus/hg38-plus.gtf" # change
 TAXON="homo"
 
-COMMON_PARS="--runThreadN 12 --outFilterType BySJout \
+COMMON_PARS="--outFilterType BySJout \
 --outFilterMultimapNmax 20 \
 --alignSJoverhangMin 8 \
 --alignSJDBoverhangMin 1 \
@@ -90,7 +91,7 @@ def run_sample(sample_name, doc_id, force_download = False):
         return
     command = "cd %s/results; mkdir -p Pass1; cd Pass1;" % dest_dir
     #command += STAR + ' ' + COMMON_PARS + ' --genomeDir ' + GENOME_DIR + ' --sjdbGTFfile ' + SJDB_GTF + ' --readFilesIn ' + reads
-    command += STAR + ' ' + COMMON_PARS + ' --genomeDir ' + GENOME_DIR + ' --readFilesIn ' + reads
+    command += STAR + ' ' + COMMON_PARS + ' --runThreadN ' + str(multiprocessing.cpu_count()) +  ' --genomeDir ' + GENOME_DIR + ' --readFilesIn ' + reads
     print command
     sys.stdout.flush()
     output = subprocess.check_output(command, shell=True)
@@ -249,7 +250,6 @@ def main():
     command = "cd /mnt/genome/STAR; tar xvfz %s" % ref_genome_star_file
     print command
     subprocess.check_output(command, shell=True)
-
 
     sys.stdout.flush()
 
