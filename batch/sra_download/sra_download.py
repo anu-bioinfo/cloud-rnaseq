@@ -17,7 +17,6 @@ import re
 REDIS_PORT = 7777
 REDIS_STORE = redis.StrictRedis(host='localhost', port=REDIS_PORT, db=2)
 FTP_HOST = "ftp://ftp-trace.ncbi.nlm.nih.gov"
-DEST_DIR = "/mnt/data/hca/"
 FASTQ_COMMAND = "fastq-dump -split-3 "
 WGET = '/usr/bin/wget '
 MIN_FILE_SIZE = 5000
@@ -30,6 +29,8 @@ GDS_PREFIX = 'gds:'
 SRA_PREFIX = 'sra:'
 GSM_PREFIX = 'gsm'
 
+ROOT_DIR = '/mnt'
+DEST_DIR = ROOT_DIR + '/data/hca/'
 
 def run_sample(download_path, s3_prefix, force_download = False):
     ''' Example:
@@ -125,9 +126,9 @@ def run(doc_id, num_partitions, partition_id):
     idx = 0
     if partition_id == 0:
                 # copy srr => gsm mapping to
-        output_gsm_mapping_for_doc_id(doc_id, '/mnt/srr_to_gsm.csv')
+        output_gsm_mapping_for_doc_id(doc_id, ROOT_DIR + '/srr_to_gsm.csv')
         s3_dest = S3_BUCKET + '/' + doc_id + '/metadata/'
-        command = "aws s3 cp %s  %s" % ('/mnt/srr_to_gsm.csv', s3_dest)
+        command = "aws s3 cp %s  %s" % (ROOT_DIR + '/srr_to_gsm.csv', s3_dest)
         print command
         output = subprocess.check_output(command, shell=True)
 
@@ -172,12 +173,20 @@ def run(doc_id, num_partitions, partition_id):
 
 def main():
     # copy the redis database and start the redis-server
-    command = "mkdir -p /mnt/"
+
+    global ROOT_DIR
+    global DEST_DIR
+
+    if os.environ.get('AWS_BATCH_JOB_ID'):
+        ROOT_DIR = ROOT_DIR + '/' + os.environ['AWS_BATCH_JOB_ID']
+        DEST_DIR = ROOT_DIR + '/data/hca/'
+
+    command = "mkdir -p %s/" % ROOT_DIR
     print command
     throw_away = subprocess.check_output(command, shell = True)
 
     rdb_s3_path = os.environ['RDB_S3_PATH']
-    command = "mkdir -p /mnt/redis; aws s3 cp %s /mnt/redis/" % rdb_s3_path
+    command = "mkdir -p %s/redis; aws s3 cp %s %s/redis/" % (ROOT_DIR, rdb_s3_path, ROOT_DIR)
     print command
     throw_away = subprocess.check_output(command, shell = True)
     global REDIS_PORT
@@ -185,7 +194,7 @@ def main():
     global REDIS_STORE
     REDIS_STORE = redis.StrictRedis(host='localhost', port=REDIS_PORT, db=2)
 
-    subprocess.Popen("cd /mnt/redis/; gunzip -f dump.rdb.gz; redis-server --port %d" % REDIS_PORT, shell=True)
+    subprocess.Popen("cd %s/redis/; gunzip -f dump.rdb.gz; redis-server --port %d" % (ROOT_DIR, REDIS_PORT), shell=True)
     time.sleep(10)
 
     doc_ids = os.environ['GDS_IDS'].split(",")
