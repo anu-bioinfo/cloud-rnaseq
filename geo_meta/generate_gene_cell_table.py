@@ -95,7 +95,7 @@ def generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table):
         cells.append(cell_info)
     return cells
 
-def output_logfiles_to_csv(log_list, log_csv, srr_gsm_map):
+def output_logfiles_to_csv(log_list, log_csv, srr_gsm_map, doc_id):
     cells = []
     headers = []
     first_file = True
@@ -126,6 +126,11 @@ def output_logfiles_to_csv(log_list, log_csv, srr_gsm_map):
             header_row.append(cell['srr_id'])
         gc_writer.writerow(header_row)
 
+        header_row = ['EXP_ID']
+        for cell in cells:
+            header_row.append(doc_id)
+        gc_writer.writerow(header_row)
+
         header_row = ['TAXON']
         for cell in cells:
             header_row.append(cell['taxon'])
@@ -143,12 +148,17 @@ def output_logfiles_to_csv(log_list, log_csv, srr_gsm_map):
                 row.append(cell['data'][idx])
             gc_writer.writerow(row)
 
-def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
+def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table, doc_id):
     with open(csv_f, 'wb') as csvfile:
         gc_writer = csv.writer(csvfile, delimiter=',')
         header_row = ['GENENAME']
         for cell in gene_cell_table:
             header_row.append(cell['srr_id'])
+        gc_writer.writerow(header_row)
+
+        header_row = ['EXP_ID']
+        for cell in gene_cell_table:
+            header_row.append(doc_id)
         gc_writer.writerow(header_row)
 
         header_row = ['TAXON']
@@ -170,21 +180,21 @@ def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
 
 
 def main():
+    global S3_BUCKET
     parser = argparse.ArgumentParser(
         description='Generate gene cell table')
     parser.add_argument('-s', action="store", dest='s3_path', default=False)
     parser.add_argument('-d', action="store", dest='gds_id', default=False)
     parser.add_argument('-f', action="store", dest='output_csv', default=False)
     parser.add_argument('-l', action="store", dest='log_csv', default=False)
+    parser.add_argument('-m', action="store", dest='mapping_file', default=False)
     results = parser.parse_args()
     if results.gds_id and results.output_csv and results.log_csv:
+        if results.s3_path:
+            S3_BUCKET=results.s3_path
         doc_id = results.gds_id
         htseq_list = get_htseq_files_from_s3(doc_id)
         log_list = get_log_files_from_s3(doc_id)
-
-        global S3_BUCKET
-        if results.s3_path:
-            S3_BUCKET=results.s3_path
 
         # creating a temp work space
         command = "mkdir -p _tmp/%s" % doc_id
@@ -196,13 +206,13 @@ def main():
             srr_to_gsm_map = get_srr_gsm_mapping(doc_id)
             gene_to_idx_table = get_gene_to_idx_mapping(htseq_list[0])
             gene_cell_table = generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table)
-            output_htseq_to_csv(gene_cell_table, results.output_csv, gene_to_idx_table)
+            output_htseq_to_csv(gene_cell_table, results.output_csv, gene_to_idx_table, doc_id)
 
         else:
             print "No htseq files for %s in %s" % (doc_id, S3_BUCKET + '/' + doc_id + '/results/')
 
         if len(log_list) > 0:
-            output_logfiles_to_csv(log_list, results.log_csv, srr_to_gsm_map)
+            output_logfiles_to_csv(log_list, results.log_csv, srr_to_gsm_map, doc_id)
         else:
             print "No log files for %s in %s" % (doc_id, S3_BUCKET + '/' + doc_id + '/results/')
 
