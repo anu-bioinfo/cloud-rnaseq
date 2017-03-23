@@ -15,8 +15,8 @@ import re
 import threading
 import multiprocessing
 
-
-DEST_DIR = "/mnt/data/hca/"
+ROOT_DIR = '/mnt'
+DEST_DIR = ROOT_DIR + "/data/hca/"
 S3_BUCKET = 's3://czi-hca/data'
 
 
@@ -24,9 +24,10 @@ STAR="/usr/local/bin/STAR"
 HTSEQ="htseq-count"
 SAMTOOLS="samtools"
 
-GENOME_DIR="/mnt/genome/STAR/HG38-PLUS/" # change
-GENOME_FASTA="/mnt/genome/hg38-plus/hg38-plus.fa" # change
-SJDB_GTF="/mnt/genome/hg38-plus/hg38-plus.gtf" # change
+GENOME_DIR = ROOT_DIR + "/genome/STAR/HG38-PLUS/" # change
+GENOME_FASTA = ROOT_DIR + "/genome/hg38-plus/hg38-plus.fa" # change
+SJDB_GTF = ROOT_DIR + "/genome/hg38-plus/hg38-plus.gtf" # change
+
 TAXON="homo"
 
 COMMON_PARS="--outFilterType BySJout \
@@ -219,42 +220,51 @@ def run(doc_ids    , num_partitions, partition_id):
 
 def main():
 
+    global ROOT_DIR
+    global DEST_DIR
+
+    if os.environ.get('AWS_BATCH_JOB_ID'):
+        ROOT_DIR = ROOT_DIR + '/' + os.environ['AWS_BATCH_JOB_ID']
+        DEST_DIR = ROOT_DIR + '/data/hca/'
+
+
+
     global GENOME_DIR
     global GENOME_FASTA
     global SJDB_GTF
     global TAXON
 
-    GENOME_DIR="/mnt/genome/STAR/HG38-PLUS/" # change
-    GENOME_FASTA="/mnt/genome/hg38-plus/hg38-plus.fa" # change
-    SJDB_GTF="/mnt/genome/hg38-plus/hg38-plus.gtf" # change
+    GENOME_DIR = ROOT_DIR + "/genome/STAR/HG38-PLUS/" # change
+    GENOME_FASTA = ROOT_DIR + "/genome/hg38-plus/hg38-plus.fa" # change
+    SJDB_GTF = ROOT_DIR + "/genome/hg38-plus/hg38-plus.gtf" # change
 
     ref_genome_file = 'hg38-plus.tgz'
     ref_genome_star_file = 'HG38-PLUS.tgz'
 
     taxon   = os.environ['TAXON']
     if taxon == 'mus':
-        GENOME_DIR="/mnt/genome/STAR/MM10-PLUS/"
-        GENOME_FASTA="/mnt/genome/mm10-plus/mm10-plus.fa" # change
-        SJDB_GTF="/mnt/genome/mm10-plus/mm10-plus.gtf" # change
+        GENOME_DIR = ROOT_DIR + "/genome/STAR/MM10-PLUS/"
+        GENOME_FASTA = ROOT_DIR + "/genome/mm10-plus/mm10-plus.fa" # change
+        SJDB_GTF = ROOT_DIR + "/genome/mm10-plus/mm10-plus.gtf" # change
         ref_genome_file = 'mm10-plus.tgz'
         ref_genome_star_file = 'MM10-PLUS.tgz'
         TAXON = 'mus'
 
     # download the genome data
 
-    command = "mkdir -p /mnt/genome; aws s3 cp s3://czi-hca/ref-genome/%s /mnt/genome" % ref_genome_file
+    command = "mkdir -p %s/genome; aws s3 cp s3://czi-hca/ref-genome/%s %s/genome" % (ROOT_DIR, ref_genome_file, ROOT_DIR)
     print command
     subprocess.check_output(command, shell=True)
 
-    command = "cd /mnt/genome; tar xvfz %s " % ref_genome_file
+    command = "cd %s/genome; tar xvfz %s " % (ROOT_DIR, ref_genome_file)
     print command
     subprocess.check_output(command, shell=True)
 
-    command = "mkdir -p /mnt/genome/STAR; aws s3 cp s3://czi-hca/ref-genome/STAR/%s /mnt/genome/STAR" % ref_genome_star_file
+    command = "mkdir -p %s/genome/STAR; aws s3 cp s3://czi-hca/ref-genome/STAR/%s %s/genome/STAR" %  (ROOT_DIR, ref_genome_star_file, ROOT_DIR)
     print command
     subprocess.check_output(command, shell=True)
 
-    command = "cd /mnt/genome/STAR; tar xvfz %s" % ref_genome_star_file
+    command = "cd %s/genome/STAR; tar xvfz %s" % (ROOT_DIR, ref_genome_star_file)
     print command
     subprocess.check_output(command, shell=True)
 
