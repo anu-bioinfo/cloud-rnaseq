@@ -7,26 +7,18 @@ import csv
 
 def generate_sample_map(s3_path, doc_id):
     s3_source = s3_path + '/' + doc_id + '/rawdata/'
-
-    # Get sample list
-    command = "aws s3 ls %s" % s3_source
-    print command
-    output = subprocess.check_output(command, shell=True).split("\n")
-    sample_list = []
-    for f in output:
-        matched = re.search("\s([\d\w\-\.]+)\/",f)
-        if matched:
-            sample_list.append(matched.group(1))
-
     # Generate mapping
     mapping = {}
-    for sample in sample_list:
-        command = "aws s3 ls %s%s/" % (s3_source, sample)
-        print command
-        fastqs = subprocess.check_output(command, shell=True).split("\n")
-        m = re.match(".*?([^ ]*)$", fastqs[0])
+
+    # Get sample list
+    command = "aws s3 ls %s --recursive | grep fastq.gz" % s3_source
+    print command
+    output = subprocess.check_output(command, shell=True).split("\n")
+    for fname in output:
+        m = re.search("/rawdata/([^/]*)/([^/]*)", fname)
         if m:
-            fastq_name = m.group(1)
+            sample = m.group(1)
+            fastq_name = m.group(2)
             proper_name = fastq_name.split("__")
             mapping[sample] = proper_name[0]
 
@@ -36,7 +28,7 @@ def generate_sample_map(s3_path, doc_id):
         for k,v in mapping.iteritems():
             m_writer.writerow([k, v])
     # copy data to the metadata folder
-    command = "aws s3 cp %s %s/%s/metadata/mapping.csv" % (output_file, s3_path, doc_id)
+    command = "aws s3 cp %s %s/%s/metadata/" % (output_file, s3_path, doc_id)
     print command
     output = subprocess.check_output(command, shell=True).split("\n")
 
