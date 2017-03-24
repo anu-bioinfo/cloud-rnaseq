@@ -68,9 +68,9 @@ def get_missing_samples_from_s3(doc_id, taxon):
 def main():
     global S3_BUCKET
     parser = argparse.ArgumentParser(
-        description='Generate gene cell table')
+        description='Check progress of the assembly job. output unfinished samples.')
     parser.add_argument('-s', action="store", dest='s3_path', default=False)
-    parser.add_argument('-f', action="store", dest='output_csv', default=False)
+    parser.add_argument('-f', action="store", dest='output_csv', default=False, help="output file")
     parser.add_argument('-t', action="store", dest='taxon', default=False, help='mus or homo')
     parser.add_argument('-d', action="store", dest='doc_ids', default = False)
     results = parser.parse_args()
