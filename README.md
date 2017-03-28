@@ -71,7 +71,7 @@ sleep 100
 ```
 
 
-Save the script and then run it under the ```hca/batch``` directory. This would launch a bunch of AWS batch jobs after a few minutes. 
+Save the script and then run it under the ```cloud-rnaseq/batch``` directory. This would launch a bunch of AWS batch jobs after a few minutes. 
 
 You can then drink some coffee, watch and wait the jobs to finish. If you are really anxious, you can see the list of your jobs by running.  
 
