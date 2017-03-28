@@ -11,7 +11,7 @@ OUTPUT_DIR=$1
 READS="${2} ${3}"
 #Reads="/home/dobin/STARruns/STARtests/2pass/LID16627_FC61U30AAXX_3_1.txt /home/dobin/STARruns/STARtests/2pass/LID16627_FC61U30AAXX_3_2.txt"
 
-if [ $# -lt 2 ]; then 
+if [ $# -lt 2 ]; then
   echo "Usage: $0 <outputdir> <read_file_1> [<read_file_2>]"
   exit 1
 fi
@@ -45,8 +45,8 @@ echo "Running second pass"
 mkdir -p Pass2
 cd Pass2
 $STAR $COMMON_PARS --genomeDir ../GenomeForPass2 --readFilesIn $READS
-cd .. 
+cd ..
 
-# htseq-count 
+# htseq-count
 echo "Running htseq"
 $HTSEQ -s no -r pos -f sam -m intersection-nonempty  ./Pass2/Aligned.sam $SJDB_GTF > htseq-count.txt

@@ -1,6 +1,6 @@
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     sha: dc50b7f09c9612624c97e7f11fa346937c37f444
     hooks:
-    -   id: trailing-whitespace
-    -   id: detect-aws-credentials
-    -   id: detect-private-key
+    -      id: trailing-whitespace
+    -      id: detect-aws-credentials
+    -      id: detect-private-key

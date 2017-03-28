@@ -59,7 +59,7 @@ def fetch_esummary(id_str, mydb='gds', pfx = GDS_PREFIX):
             records = Entrez.read(handle)
             handle.close()
             if len(pfx) > 0:
-                for r in records: 
+                for r in records:
                     key = "%s%s" %(pfx, r['Id'])
                     val = json.dumps(r)
                     REDIS_STORE.set(key, val)
@@ -209,7 +209,7 @@ def get_gsm_mapping(doc_id, force_download = False):
         return
 
     redis_key = GDS_PREFIX + doc_id
-    rec = json.loads(REDIS_STORE.get(redis_key)) 
+    rec = json.loads(REDIS_STORE.get(redis_key))
     samples = rec['Samples']
     tmp_mapping = {}
     real_mapping = {}
@@ -245,7 +245,7 @@ def get_gsm_mapping(doc_id, force_download = False):
             batch_list = []
     if len(batch_list) > 0:
         records += fetch_esummary(",".join(batch_list), 'sra', "")
-    
+
     for r in records:
         sra_id = r['Id']
         sra_runs = r['Runs']
@@ -257,15 +257,15 @@ def get_gsm_mapping(doc_id, force_download = False):
     redis_key = GSM_PREFIX + doc_id
     redis_val = json.dumps(real_mapping)
     REDIS_STORE.set(redis_key, redis_val)
-            
+
     return real_mapping
 
 def get_gsm_mapping_for_doc_list(doc_list, force_download = False):
-    for doc_id in doc_list: 
+    for doc_id in doc_list:
         get_gsm_mapping(doc_id, force_download)
 
 def output_gsm_mapping_for_doc_id(doc_id, output_file):
-    gsm_map = json.loads(REDIS_STORE.get(GSM_PREFIX + doc_id) or "{}") 
+    gsm_map = json.loads(REDIS_STORE.get(GSM_PREFIX + doc_id) or "{}")
     with open(output_file, "w") as out_f:
         for key, val in gsm_map.iteritems():
             out_f.write("%s,%s\n" % (key, val))

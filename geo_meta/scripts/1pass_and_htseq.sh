@@ -26,7 +26,7 @@ COMMON_PARS="--runThreadN 12 --sjdbGTFfile ${SJDB_GTF} --outFilterType BySJout \
 OUTPUT_DIR=$1
 READS="${2} ${3}"
 
-if [ $# -lt 2 ]; then 
+if [ $# -lt 2 ]; then
   echo "Usage: $0 <outputdir> <read_file_1> [<read_file_2>]"
   exit 1
 fi
@@ -48,6 +48,6 @@ cd ..
 # sam tools sort
 $SAMTOOLS sort -n -m 6000000000 -o Pass1/Aligned.out.sorted.bam Pass1/Aligned.out.bam
 
-# htseq-count 
+# htseq-count
 echo "Running htseq"
 $HTSEQ -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted.bam $SJDB_GTF > htseq-count.txt
