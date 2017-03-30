@@ -1,4 +1,4 @@
-What is the data in the directory? 
+How to obtain the gene cell table from the NCBI dataset? 
 We downloaded about 180 single-cell RNA sequencing SRR datasets from the NCBI database. We converted the data into fastq files and run STAR pipeline on the samples downloaded. 
 We only download datasets that contain Homo sapiens and Mus musculus samples. For datasets that contain homo samples, we ran STAR againt HG38 for all samples in the datasets. Similaryly for datasets that contain mus samples, we ran STAR against MM10 for all samples in the datasets. We then run htseq-count to get the gene count for each single-cell sample. Finally, we ran a harvest script to aggregate the results into a few files for your ease of use. 
 
