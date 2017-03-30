@@ -1,5 +1,5 @@
-# HCA
-  Human Cell Atlas Repo on Chan Zuckerberg Science Initiative
+# scRNA-seq
+  scRNA-seq Repo on Chan Zuckerberg Science Initiative
 ## About This Repo
   This repo serves two purposes.
 
