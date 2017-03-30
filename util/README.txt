@@ -2,12 +2,15 @@ What is the data in the directory?
 We downloaded about 180 single-cell RNA sequencing SRR datasets from the NCBI database. We converted the data into fastq files and run STAR pipeline on the samples downloaded. 
 We only download datasets that contain Homo sapiens and Mus musculus samples. For datasets that contain homo samples, we ran STAR againt HG38 for all samples in the datasets. Similaryly for datasets that contain mus samples, we ran STAR against MM10 for all samples in the datasets. We then run htseq-count to get the gene count for each single-cell sample. Finally, we ran a harvest script to aggregate the results into a few files for your ease of use. 
 
+The data is currently located under s3://czi-hca/summary-data/20170330/ AWS. This is a publicly readable AWS directory. 
+
 Some interesting statistics about this dataset: 
   * Raw data size: 60+ TB
   * Summary data size: 1.5GB
   * Sample Size:
     ** Homo sapiens: 21968 processed samples out of  50 datasets
     ** Mus musculus: 47102 processed samples out of 129 datasets
+
 
 How to use this data ? 
 3 relevant files are generated for Homo sapiens and Mus musculus respectively as follows:
