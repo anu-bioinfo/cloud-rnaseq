@@ -18,6 +18,45 @@ import csv
 import subprocess
 
 S3_BUCKET = 's3://czi-hca/data'
+SRR_GSM_MAPPING = {} # TODO(yf): make this less hacky
+
+def generate_metadata_objects(gse_file):
+    gse = GEOparse.get_GEO(filepath=gse_file)
+    # output
+    # {sample_data: , series_data: , platform_data:}
+    series_data = gse.metadata
+    platform_data = []
+    samples = {}
+    for key, obj in gse.gpls.iteritems():
+        obj_hash = obj.metadata
+        obj_hash['gpl_key'] = key
+        platform_data.append(obj_hash)
+
+    for key, obj in gse.gsms.iteritems():
+        sample_data = obj.metadata
+        samples[key] = {'sample_data':sample_data, 'series_data':series_data,
+                        'platform_data':platform_data}
+    return samples
+
+def gen_metadata_file(doc_id, output_dir):
+    try:
+        s3_source = S3_BUCKET + '/' + doc_id + '/metadata/'
+        command = "mkdir -p %s;mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ --recursive --exclude '*' --include '*family.soft.gz'" % (output_dir, doc_id, s3_source, doc_id)
+        print command
+        output = subprocess.check_output(command, shell=True)
+
+        command = "find _tmp/%s -maxdepth 1 -name '*family.soft.gz'" % doc_id
+        print command
+        output = subprocess.check_output(command, shell=True)
+        if output:
+            meta_files = output.rstrip().split("\n")
+            samples_obj = generate_metadata_objects(meta_files[0])
+            output_file = "%s/%s.metadata.json" % (output_dir, doc_id)
+            with open(output_file, 'wb') as csvfile:
+                csvfile.write(json.dumps(samples_obj))
+    except Exception:
+        return
+
 
 def get_srr_gsm_mapping(doc_id):
     # Downalod the data
@@ -32,8 +71,7 @@ def get_srr_gsm_mapping(doc_id):
         with open(local_file, 'rb') as csvfile:
             csvr = csv.reader(csvfile, delimiter=',')
             for row in csvr:
-                output[row[0]] = row[1]
-        return output
+                SRR_GSM_MAPPING[row[0]] = row[1]
     except Exception:
         return {}
 
@@ -52,6 +90,7 @@ def get_doc_list(s3_path):
 
 def get_htseq_files_from_s3(doc_id, taxon):
     s3_dir = S3_BUCKET + '/' + doc_id + '/results/'
+    get_srr_gsm_mapping(doc_id)
     try:
         command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ --recursive --exclude '*' --include '*.%s.htseq-count.txt'" % (doc_id, s3_dir, doc_id, taxon)
         print command
@@ -117,7 +156,7 @@ def generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table):
             cell_info['doc_id'] = m.group(1)
             cell_info['srr_id'] = m.group(2)
             cell_info['taxon'] = m.group(3)
-            cell_info['gsm_id'] = srr_to_gsm_map.get(m.group(2)) or ''
+            cell_info['gsm_id'] = SRR_GSM_MAPPING.get(m.group(2)) or ''
         cells.append(cell_info)
     return cells
 
@@ -144,7 +183,7 @@ def output_logfiles_to_csv(log_list, log_csv, srr_gsm_map):
             cell_info['doc_id'] = m.group(1)
             cell_info['srr_id'] = m.group(2)
             cell_info['taxon'] = m.group(3)
-            cell_info['gsm_id'] = srr_gsm_map.get(m.group(2)) or ''
+            cell_info['gsm_id'] = SRR_GSM_MAPPING.get(m.group(2)) or ''
         cells.append(cell_info)
     with open(log_csv, 'wb') as csvfile:
         gc_writer = csv.writer(csvfile, delimiter=',')
@@ -208,14 +247,17 @@ def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
 
 def main():
     global S3_BUCKET
+
     parser = argparse.ArgumentParser(
         description='Generate gene cell table')
     parser.add_argument('-s', action="store", dest='s3_path', default=False)
     parser.add_argument('-f', action="store", dest='output_csv', default=False)
     parser.add_argument('-l', action="store", dest='log_csv', default=False)
     parser.add_argument('-t', action="store", dest='taxon', default=False, help='mus or homo')
+    parser.add_argument('-m', action="store", dest='metadata_prefix', default=False,
+        help='meta data prefix. output would <metadata_prefix>.tgz')
     results = parser.parse_args()
-    if results.s3_path and results.output_csv and results.log_csv and results.taxon:
+    if results.s3_path and results.output_csv and results.log_csv and results.taxon and results.metadata_prefix:
         S3_BUCKET=results.s3_path
         htseq_list =[]
         log_list = []
@@ -223,6 +265,12 @@ def main():
         for doc_id in doc_list:
             htseq_list += get_htseq_files_from_s3(doc_id, results.taxon)
             log_list += get_log_files_from_s3(doc_id, results.taxon)
+            gen_metadata_file(doc_id, results.metadata_prefix)
+
+        # generating tar ball for all the metadata
+        command = "tar cvfz %s.tgz %s" % (results.metadata_prefix, results.metadata_prefix)
+        print command
+        output = subprocess.check_output(command, shell=True)
 
         # creating a temp work space
         command = "mkdir -p _tmp/%s" % doc_id
