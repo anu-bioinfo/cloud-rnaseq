@@ -56,12 +56,14 @@ def get_htseq_files_from_s3(doc_id, taxon):
         command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ --recursive --exclude '*' --include '*.%s.htseq-count.txt'" % (doc_id, s3_dir, doc_id, taxon)
         print command
         output = subprocess.check_output(command, shell=True)
-        command = "ls _tmp/%s/*.%s.htseq-count.txt" % (doc_id, taxon)
+        command = 'find _tmp/%s -maxdepth 1 -name "*.%s.htseq-count.txt"' % (doc_id, taxon)
         output = subprocess.check_output(command, shell=True)
         if output:
             htseq_files = output.rstrip().split("\n")
             #print htseq_files
             return htseq_files
+        else:
+            return []
     except Exception:
         print "%s doesn't have any results" % doc_id
         return []
@@ -74,12 +76,14 @@ def get_log_files_from_s3(doc_id, taxon):
         print command
         output = subprocess.check_output(command, shell=True)
 
-        command = "ls _tmp/%s/*.%s.log.final.out" % (doc_id, taxon)
+        command = 'find _tmp/%s -maxdepth 1 -name "*.%s.log.final.out"' % (doc_id, taxon)
         output = subprocess.check_output(command, shell=True)
         if output:
             log_files = output.rstrip().split("\n")
             #print log_file
             return log_files
+        else:
+            return []
     except Exception:
         print "%s doesn't have any results" % doc_id
         return []
