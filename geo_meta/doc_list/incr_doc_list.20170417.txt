@@ -1,0 +1,6 @@
+200081861,Homo sapiens
+200090140,Mus musculus
+200090856,Mus musculus
+200090797,Mus musculus
+200090860,Mus musculus
+200080168,Mus musculus
