@@ -12,4 +12,4 @@ S3_DIR=$1
 TAXON=$2
 CELL_COUNT=$3
 
-echo aegea batch submit --execute run_10x_count.py --storage /mnt=500 --ecr-image sra_download --environment S3_DIR=$S3_DIR TAXON=$TAXON CELL_COUNT=$CELL_COUNT
+echo aegea batch submit --execute run_10x_count.py --storage /mnt=500 --ecr-image sra_download --environment S3_DIR=$S3_DIR TAXON=$TAXON CELL_COUNT=$CELL_COUNT --memory 64000
