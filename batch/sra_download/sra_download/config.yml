@@ -30,7 +30,7 @@ build_image:
       - "curl -L https://s3.amazonaws.com/czi-hca/config/bcl2fastq2_0v2.19.0.316-2_amd64.deb > bcl2fastq2_0v2.19.0.316-2_amd64.deb"
       - "gdebi --non-interactive bcl2fastq2_0v2.19.0.316-2_amd64.deb"
       - "tar xvfz cellranger.tar.gz; mv cellranger-1.3.1 /"
-      - "curl -L https://raw.githubusercontent.com/chanzuckerberg/cloud-rnaseq/master/util/generate_gc_table_from_cellranger.py > /generate_gc_table_from_cellranger.py"
+      - "curl -L https://s3.amazonaws.com/czi-hca/config/generate_gc_table_from_cellranger.py > /generate_gc_table_from_cellranger.py"
       - "chmod 755 /generate_gc_table_from_cellranger.py"
       
 
