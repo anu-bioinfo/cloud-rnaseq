@@ -31,7 +31,7 @@ def main():
         DEST_DIR = ROOT_DIR + '/data/hca/'
 
     S3_DIR  = os.environ['S3_DIR'].rstrip('/')
-    EXP_ID = os.environ['EXP_ID'].split(",")
+    EXP_ID = os.environ['EXP_ID']
     SAMPLE_SHEET_NAME = os.environ.get('SAMPLE_SHEET', 'sample-sheet.csv')
 
     result_path = DEST_DIR + EXP_ID
