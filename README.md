@@ -119,8 +119,9 @@ Some interesting statistics about this dataset:
   * Raw data size: 80+TB
   * Summary data size: 1.5GB
   * Sample Size:
-     ** Homo sapiens: 19416 processed samples out of  51 datasets
-     ** Mus musculus: 43655 processed samples out of 133 datasets
+    * Homo sapiens: 19416 processed samples out of  51 datasets
+    * Mus musculus: 43655 processed samples out of 133 datasets
+
 ### How to use this dataset?
 5 relevant files are generated after you uncompress the .tar.gz file.
   1. *.htseq-count.csv: gene cell table in csv format. The first column is the gene names. The first few rows include some mapping information that would be of your interest. The first row contains SRR id from NCBI. The second row contains the experiment ID from NCBI. The third row indicates taxon. The fourth row contains the GSM ID. The Experiment ID and the GSM ID can be used to mapped to the metadata described below.
