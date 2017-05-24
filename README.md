@@ -97,48 +97,47 @@ cd hca/geo_meta/; ./generate_gene_cell_table.py -s <S3_BUCKET> -d <EXPERIMENT_ID
 The output htseq-count file would be in  ```<OUT_HTSEQ_CSV>``` and the STAR logs would be in ```<OUT_LOG_CSV>```.
 
 ### Notes
-  This pipeline doesn't work with 10X genomics data (yet).
+  This pipeline doesn't work with 10X genomics data because SRA format doesn't store 10X data correctly. Please go to https://support.10xgenomics.com/single-cell-gene-expression/datasets to download 10X datasets.
 
 ## NCBI SRA Pipeline
 
 ### How to obtain the gene cell table from the NCBI dataset?
 
-We downloaded about 180 single-cell RNA sequencing SRR datasets from the NCBI database, converted the data into fastq files and run STAR pipeline on the downloaded samples.
+We downloaded about 185 single-cell RNA sequencing SRR datasets from the NCBI database. We converted the data into fastq files and run STAR pipeline on the samples downloaded.
+We only download datasets that contain Homo sapiens and Mus musculus samples. For datasets that contain homo samples, we ran STAR againt HG38 for all samples in the datasets. Similaryly for datasets that contain mus samples, we ran STAR against MM10 for all samples in the datasets. We then run htseq-count to get the gene count for each single-cell sample. Finally, we ran a harvest script to aggregate the results into a few files for your ease of use.
 
-We only download datasets that contain Homo sapiens and Mus musculus samples. For datasets that contain homo samples, we ran STAR againt HG38 for all samples in the datasets. Similaryly for datasets that contain mus samples, we ran STAR against MM10 for all samples in the datasets. Next, we ran htseq-count to get the gene count for each single-cell sample. Finally, we ran a harvest script to aggregate the results into a few files for your ease of use.
 
-The summary data is currently located under ```s3://czi-hca/summary-data/20170330/``` on AWS. This is a publicly readable AWS directory.
+The data is currently located under s3://czi-hca/summary-data/20170426/ AWS. This is a publicly readable AWS directory.
+
+
+The actual (summary) data is directly downloadable at
+https://s3.amazonaws.com/czi-hca/summary-data/20170426/20170426.homo.tgz
+https://s3.amazonaws.com/czi-hca/summary-data/20170426/20170426.mus.tgz
 
 Some interesting statistics about this dataset:
-  * Raw data size: 60+ TB
+
+  * Raw data size: 80+TB
   * Summary data size: 1.5GB
   * Sample Size:
-    * Homo sapiens: 21968 processed samples out of  50 datasets
-    * Mus musculus: 47102 processed samples out of 129 datasets
+    * Homo sapiens: 19416 processed samples out of  51 datasets
+    * Mus musculus: 43655 processed samples out of 133 datasets
 
 ### How to use this dataset?
-
-3 relevant files are generated for Homo sapiens and Mus musculus respectively as follows:
-  1. **[mus|homo].mus.htseq-count.csv.gz**: gzipped gene cell table in csv format. The first column is the gene names. The first few rows include mapping information that would be of your interest. The first row contains SRR id from NCBI. The second row contains the experiment ID from NCBI. The third row indicates taxon. The fourth row contains the GSM ID. The Experiment ID and the GSM ID can be used to mapped to the metadata described below.
-  2. **[mus|homo]_meta.tgz**: compressed metadata file, once you decompressed it ("tar xvfz <filename>"), you would find a directory structure of ```[mus|homo]_meta/<EXPERIMENT_ID>.metadata.json```.  You can extract metadata for a sample by doing the following:
-
-```py
-      # Python Code below. 
-      # (exp_id, gsm_id): Experiment ID and GSM ID as described in 1
+5 relevant files are generated after you uncompress the .tar.gz file.
+  1. *.htseq-count.csv: gene cell table in csv format. The first column is the gene names. The first few rows include some mapping information that would be of your interest. The first row contains SRR id from NCBI. The second row contains the experiment ID from NCBI. The third row indicates taxon. The fourth row contains the GSM ID. The Experiment ID and the GSM ID can be used to mapped to the metadata described below.
+  2. *.log.csv.gz: STAR log files for each sample in csv format. The first column is the description of the STAR output fields. It includes # reads, #/% of mapped reads, etc by sample. Again, the first few rows include mapping information to the metadata
+  3. *.metadata.series.csv: Important metadata fields by dataset in csv format. EXP_ID row in htseq-count references doc_id column in this file.  
+  4. *.metadata.samples.csv: Important metadata fields by cell in csv format. GSM row in htseq-count references geo_accession column in this file.  
+  5. *.metadata.tgz: compressed full metadata dataset, once you decompressed it ("tar xvfz <filename>"), you would find a directory structure of <DIR>/<EXPERIMENT_ID>.metadata.json. You can extract full metadata for a sample by doing the following:
+      # Python Code below. (exp_id, gsm_id): Experiment ID and GSM ID as described in 1.
       import json
       meta_file = open("%s.metadata.json" % exp_id.rstrip(), 'rb')
       metadata_hash = json.loads(meta_file.read())
       metadata = metadata_hash[gsm_id]
-```
-
-
-
-  metadata is structured as follows:  
- * metadata['series_data']: dataset(experiment) specific data. same for samples in the same dataset
- * metadata['platform_data']: sequencing platform specific data. same for samples in the same dataset
- * metadata['sample_data']:  sample specific metaadata
-
- 3. **[mus|homo].log.csv.gz**: gzipped STAR log files for each sample in csv format. The first column is the description of the STAR output fields. It includes # reads, #/% of mapped reads, etc by sample. Again, the first few rows include mapping information to the metadata
+    metadata is structured as follows:
+      * metadata['series_data']: dataset(experiment) specific data. same for samples in the same dataset
+      * metadata['platform_data']: sequencing platform specific data. same for samples in the same dataset
+      * metadata['sample_data']:  sample specific metaadata
 
 ### Appendix
  * STAR pipeline script: script used from fastq files to htseq-count
