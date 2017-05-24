@@ -1,0 +1,2 @@
+s3_path: s3://biohub-spyros/data/170502
+sample_sheet_s3_path: s3://biohub-spyros/data/170502/config/sample-sheet.csv 
