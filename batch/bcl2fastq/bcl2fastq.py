@@ -50,7 +50,7 @@ def main():
     subprocess.check_output(command, shell=True)
 
     # Run bcl2 fastq
-    command = "%s --sample-sheet %s/%s -R %s -o %s " % (BCL2FASTQ, result_path, SAMPLE_SHEET_NAME, bcl_path, output_path)
+    command = "%s --no-lane-splitting --sample-sheet %s/%s -R %s -o %s " % (BCL2FASTQ, result_path, SAMPLE_SHEET_NAME, bcl_path, output_path)
     print command
     subprocess.check_output(command, shell=True)
 
