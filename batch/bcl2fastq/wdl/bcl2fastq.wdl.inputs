@@ -1,0 +1,5 @@
+{
+  "wf.s3_dir": "s3://biohub-spyros/data",
+  "wf.experiment_id": "170502",
+  "wf.sample_sheet_file_name": "sample-sheet.csv"
+}
