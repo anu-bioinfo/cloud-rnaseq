@@ -76,7 +76,7 @@ workflow wf {
       input: 
           source=find_wc_path.output_dir,
           destination=s3_dir + "/" + experiment_id + "/reports/bcl2fastq/",
-          flags=" -- recursive "
+          flags=" --recursive "
   }
 
   call filter_for_fastq_dirs {
@@ -88,7 +88,7 @@ workflow wf {
          input: 
              source=bcl2fastq.output_fastq_path+"/"+fastq_dir,
              destination=s3_dir + "/" + experiment_id + "/rawdata/",
-             flags=" -- recursive "
+             flags=" --recursive "
      }
   }
 }
