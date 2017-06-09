@@ -290,6 +290,7 @@ def main():
         print "Fetching info to get SRR to GSM mapping for each doc_id"
         get_gsm_mapping_for_doc_list(final_download_list)
         download_sra_urls(final_download_list)
+        # see if my command is obfusticated
 
         doc_list_to_file(final_download_list, 'sra_doc_ids.txt')
         doc_summary_to_file(final_download_list, 'sra_doc_summaries.txt')
