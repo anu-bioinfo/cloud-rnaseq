@@ -24,7 +24,7 @@ HOMO_NCBI_TAXON_ID = '9606'
 METADATA_TOP_SAMPLE_FIELDS = ['geo_accession', 'title', 'treatment_protocol_ch1',
                      'taxid_ch1', 'characteristics_ch1', 'platform_id']
 METADATA_TOP_SERIES_FIELDS = ['title', 'overall_design', 'summary', 'platform_id',
-                     'pubmed_id', 'sample_taxid']
+                     'pubmed_id', 'sample_taxid', 'relation']
 
 def taxon_name_to_id(taxon_name):
     if taxon_name == 'mus':
