@@ -19,7 +19,7 @@ import subprocess
 
 S3_BUCKET = 's3://czi-hca/data'
 
-def get_srr_gsm_mapping(doc_id, mapping_file='srr_to_gsm.csv'):
+def get_srr_gsm_mapping(doc_id, mapping_file):
     # Download the data
     try:
         output = {}
@@ -187,7 +187,7 @@ def main():
     parser.add_argument('-d', action="store", dest='gds_id', default=False)
     parser.add_argument('-f', action="store", dest='output_csv', default=False)
     parser.add_argument('-l', action="store", dest='log_csv', default=False)
-    parser.add_argument('-m', action="store", dest='mapping_file', default=False)
+    parser.add_argument('-m', action="store", dest='mapping_file', default='srr_to_gsm.csv')
     results = parser.parse_args()
     if results.gds_id and results.output_csv and results.log_csv:
         if results.s3_path:
