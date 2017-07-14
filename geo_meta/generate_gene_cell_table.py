@@ -19,16 +19,16 @@ import subprocess
 
 S3_BUCKET = 's3://czi-hca/data'
 
-def get_srr_gsm_mapping(doc_id):
-    # Downalod the data
+def get_srr_gsm_mapping(doc_id, mapping_file='srr_to_gsm.csv'):
+    # Download the data
     try:
         output = {}
-        s3_source = S3_BUCKET + '/' + doc_id + '/metadata/srr_to_gsm.csv'
+        s3_source = S3_BUCKET + '/' + doc_id + '/metadata/' + mapping_file
         command = "mkdir -p _tmp/%s; aws s3 cp %s _tmp/%s/ " % (doc_id, s3_source, doc_id)
         print command
         x = subprocess.check_output(command, shell=True)
 
-        local_file = "_tmp/%s/srr_to_gsm.csv" % doc_id
+        local_file = "_tmp/%s/%s" % (doc_id, mapping_file)
         with open(local_file, 'rb') as csvfile:
             csvr = csv.reader(csvfile, delimiter=',')
             for row in csvr:
@@ -203,7 +203,7 @@ def main():
 
         if len(htseq_list) > 0:
             # start the mapping
-            srr_to_gsm_map = get_srr_gsm_mapping(doc_id)
+            srr_to_gsm_map = get_srr_gsm_mapping(doc_id, results.mapping_file)
             gene_to_idx_table = get_gene_to_idx_mapping(htseq_list[0])
             gene_cell_table = generate_gc_table(htseq_list, srr_to_gsm_map, gene_to_idx_table)
             output_htseq_to_csv(gene_cell_table, results.output_csv, gene_to_idx_table, doc_id)
@@ -226,4 +226,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
