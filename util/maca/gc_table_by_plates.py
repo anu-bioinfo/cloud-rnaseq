@@ -135,6 +135,7 @@ def generate_gc_table(htseq_list, gene_to_idx_table, sample_to_plate_map):
         cells.append(cell_info)
     return (doc_to_counts, cells)
 
+
 def generate_log_table(log_list, sample_to_plate_map):
     cells = []
     headers = []
@@ -161,6 +162,7 @@ def generate_log_table(log_list, sample_to_plate_map):
             cell_info['gsm_id'] = sample_to_plate_map.get(m.group(2)) or ''
         cells.append(cell_info)
     return (headers, cells)
+
 
 def output_logs_to_csv(log_table, log_csv, headers):
     cells = log_table
@@ -229,13 +231,14 @@ def main():
 
     parser = argparse.ArgumentParser(
         description='Generate gene cell table')
-    parser.add_argument('-s', action="store", dest='s3_path', default=False)
-    parser.add_argument('-d', action="store", dest='output_dir', default=False, help='output dir')
+    parser.add_argument('-s', action="store", dest='s3_path', default=False, help='s3 input path')
     parser.add_argument('-t', action="store", dest='taxon', default=False, help='taxon')
+    parser.add_argument('-o', action="store", dest='s3_output_path', default=False, help='s3 output path')
     results = parser.parse_args()
-    if results.s3_path and results.output_dir and results.taxon:
+    output_dir = "tmp_maca-%d" % os.getpid()
+    if results.s3_path and results.taxon and results.s3_output_path:
 
-        command = "mkdir -p %s" % results.output_dir
+        command = "mkdir -p %s; cd %s; rm -rf *; cd .." % (output_dir, output_dir)
         print command
         output = subprocess.check_output(command, shell=True)
 
@@ -268,7 +271,7 @@ def main():
                 plate_id = cell['gsm_id']
                 plate_to_cells[plate_id] = plate_to_cells.get(plate_id, []) + [cell]
             for plate_id, cells in plate_to_cells.iteritems():
-                output_htseq_to_csv(cells, results.output_dir+'/'+plate_id+'.htseq-count.csv', gene_to_idx_table)
+                output_htseq_to_csv(cells, output_dir+'/'+plate_id+'.htseq-count.csv', gene_to_idx_table)
         else:
             print "No htseq files for %s " % (S3_BUCKET)
 
@@ -279,11 +282,19 @@ def main():
                 plate_id = cell['gsm_id']
                 plate_to_cells[plate_id] = plate_to_cells.get(plate_id, []) + [cell]
             for plate_id, cells in plate_to_cells.iteritems():
-                output_logs_to_csv(cells, results.output_dir+'/'+plate_id+'.log.csv', headers)
+                output_logs_to_csv(cells, output_dir+'/'+plate_id+'.log.csv', headers)
         else:
             print "No log files for %s" % (S3_BUCKET)
+        # Sync with aws
+        command = "aws s3 cp %s %s --recursive" % (output_dir, results.s3_output_path)
+        print command
+        output = subprocess.check_output(command, shell=True)
 
         # Clean up tmp work space
+        command = "rm -rf %s" % output_dir
+        print command
+        output = subprocess.check_output(command, shell=True)
+
         for doc_id in doc_list:
             command = "rm -rf _tmp/%s" % doc_id
             print command
