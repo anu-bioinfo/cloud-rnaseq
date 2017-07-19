@@ -5,9 +5,8 @@
 
  1. **AWS STAR**: The first purpose is to provide tools for bio researchers to run the STAR alignment pipeline in a parallelized fashion on AWS cloud. The input is the fastq files and the output is the genome-mapped BAM files and gene expression counts (from running htseq-count).
 
- 2. **NCBI SRA Pipeline**: The second purpose is to download publicly available scRNA-seq data from the [NCBI SRA archive](https://www.ncbi.nlm.nih.gov/sra), put them on Amazon S3, use tools from 1 to run the assembly pipeline and generate genee
- cell table for all these public datasets. The rawdata, metadata and outputs for all these datasets are made accessible foo
-r everyone through Amazon S3.
+ 2. **NCBI SRA Pipeline**: The second purpose is to download publicly available scRNA-seq data from the [NCBI SRA archive](https://www.ncbi.nlm.nih.gov/sra), put them on Amazon S3, use tools from 1 to run the assembly pipeline and generate gene
+ cell table for all these public datasets. The rawdata, metadata and outputs for all these datasets are made accessible for everyone through Amazon S3.
 
 ## AWS STAR
 ### Data Requirements
@@ -101,16 +100,16 @@ The output htseq-count file would be in  ```<OUT_HTSEQ_CSV>``` and the STAR logs
 
 ### How to obtain the gene cell table from the NCBI dataset?
 
-We downloaded about 185 single-cell RNA sequencing SRR datasets from the NCBI database. We converted the data into fastq files and run STAR pipeline on the samples downloaded.
-We only download datasets that contain Homo sapiens and Mus musculus samples. For datasets that contain homo samples, we ran STAR againt HG38 for all samples in the datasets. Similaryly for datasets that contain mus samples, we ran STAR against MM10 for all samples in the datasets. We then run htseq-count to get the gene count for each single-cell sample. Finally, we ran a harvest script to aggregate the results into a few files for your ease of use.
+We downloaded about 185 single-cell RNA sequencing SRR datasets from the NCBI database. We converted the data into fastq files and ran STAR pipeline on the samples downloaded.
+We only download datasets that contain Homo sapiens and Mus musculus samples. For datasets that contain *Homo sapiens* samples, we ran STAR againt `hg38` for all samples in the datasets. Similarly for datasets that contain *Mus musculus* samples, we ran STAR against `mm10` for all samples in the datasets. We then run htseq-count to get the gene count for each single-cell sample. Finally, we ran a harvest script to aggregate the results into a few files for your ease of use.
 
 
 The data is currently located under s3://czi-hca/summary-data/20170426/ AWS. This is a publicly readable AWS directory.
 
 
 The actual (summary) data is directly downloadable at
-https://s3.amazonaws.com/czi-hca/summary-data/20170426/20170426.homo.tgz
-https://s3.amazonaws.com/czi-hca/summary-data/20170426/20170426.mus.tgz
+- https://s3.amazonaws.com/czi-hca/summary-data/20170426/20170426.homo.tgz
+- https://s3.amazonaws.com/czi-hca/summary-data/20170426/20170426.mus.tgz
 
 Some interesting statistics about this dataset:
 
@@ -140,7 +139,7 @@ Some interesting statistics about this dataset:
 ### Appendix
  * STAR pipeline script: script used from fastq files to htseq-count
    https://github.com/chanzuckerberg/cloud-rnaseq/blob/master/batch/sra_download/run_star_and_htseq.py
- * Harvest script: script to aggregate all the samples to a few big fiels
+ * Harvest script: script to aggregate all the samples to a few big files
    https://github.com/chanzuckerberg/cloud-rnaseq/blob/master/util/big_gc_table.py
 
 
