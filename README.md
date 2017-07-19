@@ -135,10 +135,10 @@ Some interesting statistics about this dataset:
       metadata = metadata_hash[gsm_id]
       ```
       
-    `metadata` is structured as follows:
-      * `metadata['series_data']`: dataset(experiment) specific data. same for samples in the same dataset
-      * `metadata['platform_data']`: sequencing platform specific data. same for samples in the same dataset
-      * `metadata['sample_data']`:  sample specific metaadata
+      `metadata` is structured as follows:
+        * `metadata['series_data']`: dataset(experiment) specific data. same for samples in the same dataset
+        * `metadata['platform_data']`: sequencing platform specific data. same for samples in the same dataset
+        * `metadata['sample_data']`:  sample specific metaadata
 
 ### Appendix
  * STAR pipeline script: script used from fastq files to htseq-count
