@@ -22,7 +22,7 @@ r everyone through Amazon S3.
 
 ### Tool Installation
  1. Install [aegea](https://github.com/kislyuk/aegea). This is the tool we use to launch the STAR jobs on the AWS cloud.
- 2. Clone this [repo](https://github.com/chanzuckerberg/hca).
+ 2. Clone this [repo](https://github.com/chanzuckerberg/cloud-rnaseq).
  3. Generate dockerimage for our STAR jobs.
 
  It looks like the following in code:
