@@ -3,9 +3,7 @@
 ## About This Repo
   This repo serves two purposes.
 
- 1. **AWS STAR**: The first purpose is to provide tools for bio researchers to run the STAR assembly pipeline in a parallee
-lized fashion on AWS cloud. The input is the fastq files and the output is the mapped BAM files and gene expression countss
- (from running htseq-count).
+ 1. **AWS STAR**: The first purpose is to provide tools for bio researchers to run the STAR alignment pipeline in a parallelized fashion on AWS cloud. The input is the fastq files and the output is the genome-mapped BAM files and gene expression counts (from running htseq-count).
 
  2. **NCBI SRA Pipeline**: The second purpose is to download publicly available scRNA-seq data from the [NCBI SRA archive](https://www.ncbi.nlm.nih.gov/sra), put them on Amazon S3, use tools from 1 to run the assembly pipeline and generate genee
  cell table for all these public datasets. The rawdata, metadata and outputs for all these datasets are made accessible foo
