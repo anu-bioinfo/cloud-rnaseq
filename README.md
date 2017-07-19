@@ -121,20 +121,24 @@ Some interesting statistics about this dataset:
 
 ### How to use this dataset?
 5 relevant files are generated after you uncompress the .tar.gz file.
-  1. *.htseq-count.csv: gene cell table in csv format. The first column is the gene names. The first few rows include some mapping information that would be of your interest. The first row contains SRR id from NCBI. The second row contains the experiment ID from NCBI. The third row indicates taxon. The fourth row contains the GSM ID. The Experiment ID and the GSM ID can be used to mapped to the metadata described below.
-  2. *.log.csv.gz: STAR log files for each sample in csv format. The first column is the description of the STAR output fields. It includes # reads, #/% of mapped reads, etc by sample. Again, the first few rows include mapping information to the metadata
-  3. *.metadata.series.csv: Important metadata fields by dataset in csv format. EXP_ID row in htseq-count references doc_id column in this file.  
-  4. *.metadata.samples.csv: Important metadata fields by cell in csv format. GSM row in htseq-count references geo_accession column in this file.  
-  5. *.metadata.tgz: compressed full metadata dataset, once you decompressed it ("tar xvfz <filename>"), you would find a directory structure of <DIR>/<EXPERIMENT_ID>.metadata.json. You can extract full metadata for a sample by doing the following:
+  1. `*.htseq-count.csv`: gene cell table in csv format. The first column is the gene names. The first few rows include some mapping information that would be of your interest. The first row contains SRR id from NCBI. The second row contains the experiment ID from NCBI. The third row indicates taxon. The fourth row contains the GSM ID. The Experiment ID and the GSM ID can be used to mapped to the metadata described below.
+  2. `*.log.csv.gz`: STAR log files for each sample in csv format. The first column is the description of the STAR output fields. It includes # reads, #/% of mapped reads, etc by sample. Again, the first few rows include mapping information to the metadata
+  3. `*.metadata.series.csv`: Important metadata fields by dataset in csv format. EXP_ID row in htseq-count references doc_id column in this file.  
+  4. `*.metadata.samples.csv`: Important metadata fields by cell in csv format. GSM row in htseq-count references geo_accession column in this file.  
+  5. `*.metadata.tgz`: compressed full metadata dataset, once you decompressed it ("tar xvfz <filename>"), you would find a directory structure of <DIR>/<EXPERIMENT_ID>.metadata.json. You can extract full metadata for a sample by doing the following:
       # Python Code below. (exp_id, gsm_id): Experiment ID and GSM ID as described in 1.
+      
+      ```python
       import json
       meta_file = open("%s.metadata.json" % exp_id.rstrip(), 'rb')
       metadata_hash = json.loads(meta_file.read())
       metadata = metadata_hash[gsm_id]
-    metadata is structured as follows:
-      * metadata['series_data']: dataset(experiment) specific data. same for samples in the same dataset
-      * metadata['platform_data']: sequencing platform specific data. same for samples in the same dataset
-      * metadata['sample_data']:  sample specific metaadata
+      ```
+      
+    `metadata` is structured as follows:
+      * `metadata['series_data']`: dataset(experiment) specific data. same for samples in the same dataset
+      * `metadata['platform_data']`: sequencing platform specific data. same for samples in the same dataset
+      * `metadata['sample_data']`:  sample specific metaadata
 
 ### Appendix
  * STAR pipeline script: script used from fastq files to htseq-count
