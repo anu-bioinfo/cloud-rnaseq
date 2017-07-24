@@ -176,6 +176,8 @@ def main():
 
     global ROOT_DIR
     global DEST_DIR
+    global S3_BUCKET
+    S3_BUCKET = os.environ['S3_BUCKET']
 
     if os.environ.get('AWS_BATCH_JOB_ID'):
         ROOT_DIR = ROOT_DIR + '/' + os.environ['AWS_BATCH_JOB_ID']
