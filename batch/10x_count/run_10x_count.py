@@ -72,7 +72,7 @@ def main():
     subprocess.check_output(command, shell=True)
 
     # Run cellranger
-    command = "cd %s; %s count --cells=%s --sample=%s --id=%s --fastqs=%s --transcriptome=%s" % (result_path, CELL_RANGER, CELL_COUNT, sample_id, sample_id, fastq_path, GENOME_DIR)
+    command = "cd %s; %s count --nosecondary --cells=%s --sample=%s --id=%s --fastqs=%s --transcriptome=%s" % (result_path, CELL_RANGER, CELL_COUNT, sample_id, sample_id, fastq_path, GENOME_DIR)
     print command
     subprocess.check_output(command, shell=True)
 
