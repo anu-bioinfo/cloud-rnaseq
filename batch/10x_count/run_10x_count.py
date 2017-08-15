@@ -17,8 +17,9 @@ import re
 import threading
 import multiprocessing
 
-CELL_RANGER = '/cellranger-1.3.1/cellranger'
-GC_TABLE_GENERATOR = '/generate_gc_table_from_cellranger.py'
+#CELL_RANGER = '/cellranger-1.3.1/cellranger'
+CELL_RANGER = 'cellranger'
+GC_TABLE_GENERATOR = 'generate_gc_table_from_cellranger.py'
 
 ROOT_DIR = '/mnt'
 DEST_DIR = ROOT_DIR + "/data/hca/"
@@ -34,8 +35,10 @@ def main():
 
     # required environmental variable
     TAXON   = os.environ['TAXON']
-    S3_DIR  = os.environ['S3_DIR'].rstrip('/')
+    S3_INPUT_DIR  = os.environ['S3_INPUT_DIR'].rstrip('/')
+    S3_OUTPUT_DIR = os.environ['S3_OUTPUT_DIR'].rstrip('/')
     CELL_COUNT = os.environ['CELL_COUNT']
+
 
 
     GENOME_BASE_DIR = ROOT_DIR + "/genome/cellranger"
@@ -46,36 +49,62 @@ def main():
     GENOME_TAR_SORUCE = 's3://czi-hca/ref-genome/cellranger/' + GENOME_NAME + '.tgz'
     GENOME_DIR = GENOME_BASE_DIR + "/" + GENOME_NAME + "/"
 
-    # download the ref genome data
-    command = "mkdir -p %s; aws s3 cp %s  %s/" %  (GENOME_BASE_DIR, GENOME_TAR_SORUCE, GENOME_BASE_DIR)
-    print command
-    subprocess.check_output(command, shell=True)
+    if os.environ.get('AWS_BATCH_JOB_ID'): # Using BATCH
+        # download the ref genome data
+        command = "mkdir -p %s; aws s3 cp %s  %s/" %  (GENOME_BASE_DIR, GENOME_TAR_SORUCE, GENOME_BASE_DIR)
+        print command
+        subprocess.check_output(command, shell=True)
 
-    ref_genome_file = os.path.basename(GENOME_TAR_SORUCE)
-    command = "cd %s; tar xvfz %s" % (GENOME_BASE_DIR, ref_genome_file)
-    print command
-    subprocess.check_output(command, shell=True)
+        ref_genome_file = os.path.basename(GENOME_TAR_SORUCE)
+        command = "cd %s; tar xvfz %s" % (GENOME_BASE_DIR, ref_genome_file)
+        print command
+        subprocess.check_output(command, shell=True)
 
     sys.stdout.flush()
 
     # download the fastq files
-    sample_id = os.path.basename(S3_DIR)
+    sample_id = os.path.basename(S3_INPUT_DIR)
     result_path = DEST_DIR + sample_id
     fastq_path = result_path + '/fastqs'
     output_path = result_path + '/' + sample_id
 
 
-    command = "mkdir -p %s; aws s3 cp %s/rawdata/ %s --recursive" % (fastq_path, S3_DIR, fastq_path)
+    command = "mkdir -p %s; aws s3 cp %s %s --recursive" % (fastq_path, S3_INPUT_DIR, fastq_path)
     print command
     subprocess.check_output(command, shell=True)
+
 
     # Run cellranger
-    command = "cd %s; %s count --cells=%s --sample=%s --id=%s --fastqs=%s --transcriptome=%s" % (result_path, CELL_RANGER, CELL_COUNT, sample_id, sample_id, fastq_path, GENOME_DIR)
+    command = "cd %s; %s count --localmem=40 --nosecondary --cells=%s --sample=%s --id=%s --fastqs=%s --transcriptome=%s" % (result_path, CELL_RANGER, CELL_COUNT, sample_id, sample_id, fastq_path, GENOME_DIR)
+    print command
+    try:
+        cmnd_output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True, universal_newlines=True);
+    except subprocess.CalledProcessError as exc:
+        print("Status : FAIL", exc.returncode, exc.output)
+        command = "cd %s; tar cvfz %s.tgz %s" % (result_path, sample_id, sample_id)
+        print command
+        subprocess.check_output(command, shell=True)
+
+        command = "cd %s; aws s3 cp %s.tgz %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
+        print command
+        subprocess.check_output(command, shell=True)
+        sys.exit(1)
+
+    # Move results(websummary, cell-gene table, tarball) data back to S3
+    command = "cd %s; aws s3 cp %s/outs/web_summary.html %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
     print command
     subprocess.check_output(command, shell=True)
 
-    # Move results(websummary, cell-gene table, tarball) data back to S3
-    command = "cd %s; aws s3 cp %s/outs/web_summary.html %s/results/ " % (result_path, sample_id, S3_DIR)
+    command = "cd %s; aws s3 cp %s/outs/metrics_summary.csv %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
+    print command
+    subprocess.check_output(command, shell=True)
+
+
+    command = "cd %s; tar cvfz %s.tgz %s" % (result_path, sample_id, sample_id)
+    print command
+    subprocess.check_output(command, shell=True)
+
+    command = "cd %s; aws s3 cp %s.tgz %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
     print command
     subprocess.check_output(command, shell=True)
 
@@ -84,15 +113,7 @@ def main():
     print command
     subprocess.check_output(command, shell=True)
 
-    command = "cd %s; aws s3 cp %s.%s.cell-gene.csv %s/results/" % (result_path, sample_id, TAXON, S3_DIR)
-    print command
-    subprocess.check_output(command, shell=True)
-
-    command = "cd %s; tar cvfz %s.tgz %s" % (result_path, sample_id, sample_id)
-    print command
-    subprocess.check_output(command, shell=True)
-
-    command = "cd %s; aws s3 cp %s.tgz %s/results/ " % (result_path, sample_id, S3_DIR)
+    command = "cd %s; aws s3 cp %s.%s.cell-gene.csv %s/" % (result_path, sample_id, TAXON, S3_OUTPUT_DIR)
     print command
     subprocess.check_output(command, shell=True)
 

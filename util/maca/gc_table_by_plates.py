@@ -101,13 +101,15 @@ def get_log_files_from_s3(doc_id, taxon):
 def get_gene_to_idx_mapping(ht_seq_path):
     print "getting gene to idx mapping: %s" % ht_seq_path
     gene_to_idx = {}
+    gene_array = []
     idx = 0
     with open(ht_seq_path, "r") as ins:
         for line in ins:
             fields = line.rstrip().split("\t")
             gene_to_idx[fields[0]] = idx
+            gene_array.append(fields[0])
             idx += 1
-    return gene_to_idx
+    return (gene_array, gene_to_idx)
 
 def generate_gc_table(htseq_list, gene_to_idx_table, sample_to_plate_map):
     cells = []
@@ -134,6 +136,7 @@ def generate_gc_table(htseq_list, gene_to_idx_table, sample_to_plate_map):
             doc_to_counts[doc_id] = doc_to_counts.get(doc_id, 0) + 1
         cells.append(cell_info)
     return (doc_to_counts, cells)
+
 
 def generate_log_table(log_list, sample_to_plate_map):
     cells = []
@@ -162,11 +165,12 @@ def generate_log_table(log_list, sample_to_plate_map):
         cells.append(cell_info)
     return (headers, cells)
 
+
 def output_logs_to_csv(log_table, log_csv, headers):
     cells = log_table
     with open(log_csv, 'wb') as csvfile:
         gc_writer = csv.writer(csvfile, delimiter=',')
-        header_row = ['FIELD_NAMES']
+        header_row = ['SAMPLE_ID']
         for cell in cells:
             header_row.append(cell['srr_id'])
         gc_writer.writerow(header_row)
@@ -181,7 +185,7 @@ def output_logs_to_csv(log_table, log_csv, headers):
             header_row.append(cell['taxon'])
         gc_writer.writerow(header_row)
 
-        header_row = ['GSM']
+        header_row = ['WELL_MAPPING']
         for cell in cells:
             header_row.append(cell['gsm_id'])
         gc_writer.writerow(header_row)
@@ -193,10 +197,30 @@ def output_logs_to_csv(log_table, log_csv, headers):
                 row.append(cell['data'][idx])
             gc_writer.writerow(row)
 
+# TODO(yf): the following two functions are basically identical. deduplicate
+def output_logs_to_csv_by_cell(log_table, log_csv, headers):
+    with open(log_csv, 'wb') as csvfile:
+        gc_writer = csv.writer(csvfile, delimiter=',')
+        header_row = ['SAMPLE_ID', 'EXP_ID', 'TAXON', 'WELL_MAPPING'] + headers
+        gc_writer.writerow(header_row)
+        for cell in log_table:
+            row = [cell['srr_id'], cell['doc_id'], cell['taxon'], cell['gsm_id']] + cell['data']
+            gc_writer.writerow(row)
+
+def output_htseq_to_csv_by_cell(gene_cell_table, csv_f, gene_array):
+    with open(csv_f, 'wb') as csvfile:
+        gc_writer = csv.writer(csvfile, delimiter=',')
+        header_row = ['SAMPLE_ID', 'EXP_ID', 'TAXON', 'WELL_MAPPING'] + gene_array
+        gc_writer.writerow(header_row)
+        for cell in gene_cell_table:
+            row = [cell['srr_id'], cell['doc_id'], cell['taxon'], cell['gsm_id']] + cell['data']
+            gc_writer.writerow(row)
+
 def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
     with open(csv_f, 'wb') as csvfile:
         gc_writer = csv.writer(csvfile, delimiter=',')
-        header_row = ['GENENAME']
+
+        header_row = ['SAMPLE_ID']
         for cell in gene_cell_table:
             header_row.append(cell['srr_id'])
         gc_writer.writerow(header_row)
@@ -211,7 +235,7 @@ def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
             header_row.append(cell['taxon'])
         gc_writer.writerow(header_row)
 
-        header_row = ['GSM']
+        header_row = ['WELL_MAPPING']
         for cell in gene_cell_table:
             header_row.append(cell['gsm_id'])
         gc_writer.writerow(header_row)
@@ -223,19 +247,19 @@ def output_htseq_to_csv(gene_cell_table, csv_f, gene_to_idx_table):
                 row.append(cell['data'][idx])
             gc_writer.writerow(row)
 
-
 def main():
     global S3_BUCKET
 
     parser = argparse.ArgumentParser(
         description='Generate gene cell table')
-    parser.add_argument('-s', action="store", dest='s3_path', default=False)
-    parser.add_argument('-d', action="store", dest='output_dir', default=False, help='output dir')
+    parser.add_argument('-s', action="store", dest='s3_path', default=False, help='s3 input path')
     parser.add_argument('-t', action="store", dest='taxon', default=False, help='taxon')
+    parser.add_argument('-o', action="store", dest='s3_output_path', default=False, help='s3 output path')
     results = parser.parse_args()
-    if results.s3_path and results.output_dir and results.taxon:
+    output_dir = "tmp_maca-%d" % os.getpid()
+    if results.s3_path and results.taxon and results.s3_output_path:
 
-        command = "mkdir -p %s" % results.output_dir
+        command = "mkdir -p %s; cd %s; rm -rf *; cd .." % (output_dir, output_dir)
         print command
         output = subprocess.check_output(command, shell=True)
 
@@ -259,7 +283,7 @@ def main():
 
         if len(htseq_list) > 0:
             # start the mapping
-            gene_to_idx_table = get_gene_to_idx_mapping(htseq_list[0])
+            (gene_array, gene_to_idx_table) = get_gene_to_idx_mapping(htseq_list[0])
             (doc_to_counts, gene_cell_table) = generate_gc_table(htseq_list, gene_to_idx_table,
                     sample_to_plate_mapping)
             # break the data based on plate id
@@ -268,7 +292,9 @@ def main():
                 plate_id = cell['gsm_id']
                 plate_to_cells[plate_id] = plate_to_cells.get(plate_id, []) + [cell]
             for plate_id, cells in plate_to_cells.iteritems():
-                output_htseq_to_csv(cells, results.output_dir+'/'+plate_id+'.htseq-count.csv', gene_to_idx_table)
+                output_htseq_to_csv(cells, output_dir+'/'+plate_id+'.htseq-count.csv', gene_to_idx_table)
+                output_htseq_to_csv_by_cell(cells, output_dir+'/'+plate_id+'.htseq-count-by-cell.csv',
+                        gene_array)
         else:
             print "No htseq files for %s " % (S3_BUCKET)
 
@@ -279,11 +305,20 @@ def main():
                 plate_id = cell['gsm_id']
                 plate_to_cells[plate_id] = plate_to_cells.get(plate_id, []) + [cell]
             for plate_id, cells in plate_to_cells.iteritems():
-                output_logs_to_csv(cells, results.output_dir+'/'+plate_id+'.log.csv', headers)
+                output_logs_to_csv(cells, output_dir+'/'+plate_id+'.log.csv', headers)
+                output_logs_to_csv_by_cell(cells, output_dir+'/'+plate_id+'.log-by-cell.csv', headers)
         else:
             print "No log files for %s" % (S3_BUCKET)
+        # Sync with aws
+        command = "aws s3 cp %s %s --recursive" % (output_dir, results.s3_output_path)
+        print command
+        output = subprocess.check_output(command, shell=True)
 
         # Clean up tmp work space
+        command = "rm -rf %s" % output_dir
+        print command
+        output = subprocess.check_output(command, shell=True)
+
         for doc_id in doc_list:
             command = "rm -rf _tmp/%s" % doc_id
             print command

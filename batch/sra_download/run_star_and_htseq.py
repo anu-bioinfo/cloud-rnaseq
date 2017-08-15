@@ -46,7 +46,7 @@ COMMON_PARS="--outFilterType BySJout \
 --outReadsUnmapped Fastx \
 --readFilesCommand zcat"
 
-HTSEQ_THREADS_MAX = 10
+HTSEQ_THREADS_MAX = 4
 CURR_MIN_VER = 20170301
 
 def run_sample(sample_name, doc_id, force_download = False):
@@ -121,6 +121,10 @@ def run_sample(sample_name, doc_id, force_download = False):
     print command
     output = subprocess.check_output(command, shell=True)
     print output
+    # generating files for htseq-count
+    command = "cd %s/results; %s sort -m 6000000000 -n -o ./Pass1/Aligned.out.sorted-byname.bam  ./Pass1/Aligned.out.sorted.bam " % (dest_dir, SAMTOOLS)
+    print command
+    output = subprocess.check_output(command, shell=True)
 
     sys.stdout.flush()
 
@@ -139,7 +143,8 @@ class htseqThread(threading.Thread):
         dest_dir = self.htseqParams['dest_dir']
 
         # running htseq
-        command = "cd %s/results; %s -r pos -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted.bam  %s > htseq-count.txt" % (dest_dir, HTSEQ, SJDB_GTF)
+
+        command = "cd %s/results; %s -r name -s no -f bam -m intersection-nonempty  ./Pass1/Aligned.out.sorted-byname.bam  %s > htseq-count.txt; rm ./Pass1/Aligned.out.sorted-byname.bam" % (dest_dir, HTSEQ, SJDB_GTF)
         print command
         output = subprocess.check_output(command, shell=True)
 

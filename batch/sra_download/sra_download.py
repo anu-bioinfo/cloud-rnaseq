@@ -123,6 +123,8 @@ def output_gsm_mapping_for_doc_id(doc_id, output_file):
 def run(doc_id, num_partitions, partition_id):
     print "Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id)
     file_list = json.loads(REDIS_STORE.get('sra:' + doc_id) or "[]")
+    if len(file_list) == 0:
+        print "No SRA entry for %s" % doc_id
     idx = 0
     if partition_id == 0:
                 # copy srr => gsm mapping to
@@ -134,7 +136,7 @@ def run(doc_id, num_partitions, partition_id):
 
         # Download FTP meta data
         doc_info = json.loads(REDIS_STORE.get(GDS_PREFIX + doc_id) or "{}")
-        meta_data_link = doc_info['FTPLink']
+        meta_data_link = doc_info.get('FTPLink')
         if meta_data_link:
             download_url = meta_data_link + '/soft/' + doc_info['Accession'] + '_family.soft.gz'
             dest_dir = DEST_DIR + 'metadata/' + doc_id + '/'
@@ -176,6 +178,8 @@ def main():
 
     global ROOT_DIR
     global DEST_DIR
+    global S3_BUCKET
+    S3_BUCKET = os.environ['S3_BUCKET']
 
     if os.environ.get('AWS_BATCH_JOB_ID'):
         ROOT_DIR = ROOT_DIR + '/' + os.environ['AWS_BATCH_JOB_ID']
