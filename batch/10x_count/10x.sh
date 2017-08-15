@@ -14,4 +14,4 @@ S3_OUTPUT_DIR=$2
 TAXON=$3
 CELL_COUNT=$4
 
-echo aegea batch submit --execute run_10x_count.py --storage /mnt=500 --ecr-image sra_download --environment S3_INPUT_DIR=$S3_INPUT_DIR S3_OUTPUT_DIR=$S3_OUTPUT_DIR TAXON=$TAXON CELL_COUNT=$CELL_COUNT --memory 64000
+echo aegea batch submit --execute run_10x_count.py --storage /mnt=2000 --ecr-image sra_download --environment S3_INPUT_DIR=$S3_INPUT_DIR S3_OUTPUT_DIR=$S3_OUTPUT_DIR TAXON=$TAXON CELL_COUNT=$CELL_COUNT --memory-mb 64000 --vcpus 32

@@ -40,6 +40,7 @@ def main():
     CELL_COUNT = os.environ['CELL_COUNT']
 
 
+
     GENOME_BASE_DIR = ROOT_DIR + "/genome/cellranger"
     GENOME_NAME = 'HG38-PLUS'
     if TAXON == 'mus':
@@ -48,15 +49,16 @@ def main():
     GENOME_TAR_SORUCE = 's3://czi-hca/ref-genome/cellranger/' + GENOME_NAME + '.tgz'
     GENOME_DIR = GENOME_BASE_DIR + "/" + GENOME_NAME + "/"
 
-    # download the ref genome data
-    command = "mkdir -p %s; aws s3 cp %s  %s/" %  (GENOME_BASE_DIR, GENOME_TAR_SORUCE, GENOME_BASE_DIR)
-    print command
-    #subprocess.check_output(command, shell=True)
+    if os.environ.get('AWS_BATCH_JOB_ID'): # Using BATCH
+        # download the ref genome data
+        command = "mkdir -p %s; aws s3 cp %s  %s/" %  (GENOME_BASE_DIR, GENOME_TAR_SORUCE, GENOME_BASE_DIR)
+        print command
+        subprocess.check_output(command, shell=True)
 
-    ref_genome_file = os.path.basename(GENOME_TAR_SORUCE)
-    command = "cd %s; tar xvfz %s" % (GENOME_BASE_DIR, ref_genome_file)
-    print command
-    #subprocess.check_output(command, shell=True)
+        ref_genome_file = os.path.basename(GENOME_TAR_SORUCE)
+        command = "cd %s; tar xvfz %s" % (GENOME_BASE_DIR, ref_genome_file)
+        print command
+        subprocess.check_output(command, shell=True)
 
     sys.stdout.flush()
 
@@ -71,10 +73,22 @@ def main():
     print command
     subprocess.check_output(command, shell=True)
 
+
     # Run cellranger
     command = "cd %s; %s count --nosecondary --cells=%s --sample=%s --id=%s --fastqs=%s --transcriptome=%s" % (result_path, CELL_RANGER, CELL_COUNT, sample_id, sample_id, fastq_path, GENOME_DIR)
     print command
-    subprocess.check_output(command, shell=True)
+    try:
+        cmnd_output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True, universal_newlines=True);
+    except subprocess.CalledProcessError as exc:
+        print("Status : FAIL", exc.returncode, exc.output)
+        command = "cd %s; tar cvfz %s.tgz %s" % (result_path, sample_id, sample_id)
+        print command
+        subprocess.check_output(command, shell=True)
+
+        command = "cd %s; aws s3 cp %s.tgz %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
+        print command
+        subprocess.check_output(command, shell=True)
+        sys.exit(1)
 
     # Move results(websummary, cell-gene table, tarball) data back to S3
     command = "cd %s; aws s3 cp %s/outs/web_summary.html %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
