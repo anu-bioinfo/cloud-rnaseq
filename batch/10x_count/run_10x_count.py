@@ -75,7 +75,7 @@ def main():
 
 
     # Run cellranger
-    command = "cd %s; %s count --nosecondary --cells=%s --sample=%s --id=%s --fastqs=%s --transcriptome=%s" % (result_path, CELL_RANGER, CELL_COUNT, sample_id, sample_id, fastq_path, GENOME_DIR)
+    command = "cd %s; %s count --localmem=40 --nosecondary --cells=%s --sample=%s --id=%s --fastqs=%s --transcriptome=%s" % (result_path, CELL_RANGER, CELL_COUNT, sample_id, sample_id, fastq_path, GENOME_DIR)
     print command
     try:
         cmnd_output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True, universal_newlines=True);
@@ -92,6 +92,10 @@ def main():
 
     # Move results(websummary, cell-gene table, tarball) data back to S3
     command = "cd %s; aws s3 cp %s/outs/web_summary.html %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
+    print command
+    subprocess.check_output(command, shell=True)
+
+    command = "cd %s; aws s3 cp %s/outs/metrics_summary.csv %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
     print command
     subprocess.check_output(command, shell=True)
 
