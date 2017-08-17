@@ -11,4 +11,4 @@ S3_INPUT_DIR=$1
 S3_OUTPUT_DIR=$2
 S3_SAMPLE_SHEET_PATH=$3
 
-echo aegea batch submit --execute run_10x_mkfastq.py --storage /mnt=2000 --ecr-image sra_download --memory 64000 --environment S3_INPUT_DIR=$S3_INPUT_DIR S3_OUTPUT_DIR=$S3_OUTPUT_DIR S3_SAMPLE_SHEET_PATH=$S3_SAMPLE_SHEET_PATH 
+echo aegea batch submit --execute run_10x_mkfastq.py --storage /mnt=2000 --ecr-image sra_download --memory 60000 --vcpus 16 --environment S3_INPUT_DIR=$S3_INPUT_DIR S3_OUTPUT_DIR=$S3_OUTPUT_DIR S3_SAMPLE_SHEET_PATH=$S3_SAMPLE_SHEET_PATH 
