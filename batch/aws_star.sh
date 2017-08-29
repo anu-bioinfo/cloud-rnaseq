@@ -21,7 +21,7 @@ SCRIPT_NAME=`basename $S3_SCRIPT_LOC`
 p=0
 while [ $p -lt $NUM_PA ]
 do
-  COMMAND="aws cp $S3_SCRIPT_LOC .; chmod 755 $SCRIPT_NAME; S3_BUCKET=$S3_BUCKET EXP_IDS=$DOC_IDS NUM_PARTITIONS=$NUM_PA TAXON=$TAXON PARTITION_ID=$p ./$SCRIPT_NAME"
+  COMMAND="aws s3 cp $S3_SCRIPT_LOC .; chmod 755 $SCRIPT_NAME; S3_BUCKET=$S3_BUCKET EXP_IDS=$DOC_IDS NUM_PARTITIONS=$NUM_PA TAXON=$TAXON PARTITION_ID=$p ./$SCRIPT_NAME"
   echo aegea batch submit --command=\"$COMMAND\" --storage /mnt=500 --ecr-image sra_download --environment S3_BUCKET=$S3_BUCKET EXP_IDS=$DOC_IDS NUM_PARTITIONS=$NUM_PA TAXON=$TAXON PARTITION_ID=$p --memory 64000
   echo sleep 20
   p=$(( $p + 1))
