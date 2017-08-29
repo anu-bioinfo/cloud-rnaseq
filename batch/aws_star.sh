@@ -6,7 +6,7 @@ if [ $# -lt 5 ]; then
   echo "   <EXP_IDS>: experiment directories under <S3_BUCKET> seperated by ','. Example: 200067835,200057872"
   echo "   <NUM_PARTITIONS>: Number of partitions you want to run. Example: 10 means you will run in 10 different dockercontainers"
   echo "   <TAXON>: mus or homo. mus will use mm10 as reference genome, homo will use hg38 as reference genome"
-  echo "   <SCRIPT_LOCATION>: script location. i.e. s3://czi-hca/config/run_star_and_htseq.py"
+  echo "   <S3_SCRIPT_LOC>: script location. i.e. s3://czi-hca/config/run_star_and_htseq.py"
   exit 1
 fi
 
