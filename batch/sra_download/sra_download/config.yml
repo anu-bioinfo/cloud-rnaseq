@@ -32,5 +32,5 @@ build_image:
       - "tar xvfz cellranger.tar.gz; mv cellranger-2.0.1/* /usr/bin/"
       - "curl -L https://s3.amazonaws.com/czi-hca/config/generate_gc_table_from_cellranger.py > /usr/bin/generate_gc_table_from_cellranger.py"
       - "chmod 755 /usr/bin/generate_gc_table_from_cellranger.py"
-      
+
 
