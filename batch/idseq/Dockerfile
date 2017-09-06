@@ -5,11 +5,12 @@ FROM ubuntu:16.04
 MAINTAINER Yun-Fang Juan yunfang@chanzuckerberg.com
 
 # Add packages, update image, and clear cache
-RUN apt-get update && apt-get install -y build-essential curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip g++ zlib1g-dev
+RUN apt-get update && apt-get install -y build-essential curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip g++ zlib1g-dev gcc pkg-config apt-utils
 
 RUN pip install --upgrade pip
 RUN pip install htseq==0.6.1p1
 RUN pip install redis biopython pysam
+RUN pip install awscli --upgrade
 
 WORKDIR /tmp
 # install STAR
@@ -25,6 +26,40 @@ RUN make NO_TBB=1 # we may want tbb (for "superior thread scaling") later, so wi
 RUN mv -t /usr/local/bin/ bowtie2 bowtie2-align-l bowtie2-align-s bowtie2-build bowtie2-build-l bowtie2-build-s bowtie2-inspect bowtie2-inspect-l bowtie2-inspect-s
 
 WORKDIR /tmp
+# install samtools
+RUN apt-get install -y libncurses-dev libbz2-dev
+RUN wget https://github.com/samtools/samtools/releases/download/1.5/samtools-1.5.tar.bz2
+RUN tar -jxf samtools-1.5.tar.bz2
+WORKDIR /tmp/samtools-1.5
+RUN ./configure --disable-lzma
+RUN make
+RUN mv samtools /usr/local/bin/
+
+WORKDIR /tmp
+# Compile and install PriceSeqFilter
+RUN wget http://derisilab.ucsf.edu/software/price/PriceSource140408.tar.gz
+RUN tar -xzf PriceSource140408.tar.gz
+WORKDIR /tmp/PriceSource140408
+RUN make
+RUN mv PriceSeqFilter /usr/local/bin/
+
+WORKDIR /tmp
+# Compile and install cdhit-dup tools
+RUN wget https://github.com/weizhongli/cdhit/archive/V4.6.8.zip
+RUN unzip V4.6.8.zip
+WORKDIR /tmp/cdhit-4.6.8
+RUN make
+WORKDIR /tmp/cdhit-4.6.8/cd-hit-auxtools
+RUN make
+RUN mv cd-hit-dup /usr/local/bin/
+
+WORKDIR /tmp
+# Compile and install Fastax tools
+RUN wget http://launchpadlibrarian.net/161878011/libgtextutils0_0.7-1_amd64.deb
+RUN wget http://launchpadlibrarian.net/162265652/fastx-toolkit_0.0.14-1_amd64.deb
+RUN gdebi --non-interactive libgtextutils0_0.7-1_amd64.deb
+RUN gdebi --non-interactive fastx-toolkit_0.0.14-1_amd64.deb
+
 
 # Cleanup
 RUN rm -rf /tmp/*
