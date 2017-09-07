@@ -7,9 +7,10 @@ import json
 import csv
 import shelve
 import argparse
+import re
 
 INPUT_BUCKET = 's3://czbiohub-infectious-disease/UGANDA'
-OUTPUT_BUCKET = 's3://s3://yunfang-workdir/id-uganda'
+OUTPUT_BUCKET = 's3://yunfang-workdir/id-uganda'
 KEY_S3_PATH = 's3://cdebourcy-test/cdebourcy_7-19-17.pem'
 ROOT_DIR = '/mnt'
 DEST_DIR = ROOT_DIR + '/idseq/data' # generated data go here
@@ -335,9 +336,12 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
     scratch_dir = sample_dir + '/scratch'
     execute_command("mkdir -p %s %s %s %s" % (sample_dir, fastq_dir, result_dir, scratch_dir))
     execute_command("mkdir -p %s " % REF_DIR);
-    command = "aws s3 cp %s/ %s --exclude='*.*' --include='*.fastq.gz' --recursive" % (sample_s3_input_path, fastq_dir)
-    print execute_command(command)
-
+    command = "aws s3 ls %s/ |grep fastq.gz" % (sample_s3_input_path)
+    output = execute_command(command).rstrip().split("\n")
+    for line in output:
+        m = re.match(".*(^[ ]*.fastq.gz)", line)
+        if m:
+            execute_command("aws s3 cp %s/%s %s/" % (sample_s3_input_path, m.group(1), fastq_dir))
     fastq_files = execute_command("ls %s/*.fastq.gz" % fastq_dir).rstrip().split("\n")
 
     if len(fastq_files) <= 1:
