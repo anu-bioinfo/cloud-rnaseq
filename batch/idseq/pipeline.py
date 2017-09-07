@@ -340,9 +340,12 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
     command = "aws s3 ls %s/ |grep fastq.gz" % (sample_s3_input_path)
     output = execute_command(command).rstrip().split("\n")
     for line in output:
-        m = re.match(".*(^[ ]*.fastq.gz)", line)
+        m = re.match(".*?([^ ]*.fastq.gz)", line)
         if m:
             execute_command("aws s3 cp %s/%s %s/" % (sample_s3_input_path, m.group(1), fastq_dir))
+        else:
+            print "%s doesn't match fastq.gz" % line
+
     fastq_files = execute_command("ls %s/*.fastq.gz" % fastq_dir).rstrip().split("\n")
 
     if len(fastq_files) <= 1:
