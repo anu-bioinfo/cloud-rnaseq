@@ -8,6 +8,7 @@ import csv
 import shelve
 import argparse
 import re
+import time
 
 INPUT_BUCKET = 's3://czbiohub-infectious-disease/UGANDA'
 OUTPUT_BUCKET = 's3://yunfang-workdir/id-uganda'
@@ -347,8 +348,8 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
     if len(fastq_files) <= 1:
         return # only support paired reads for now
     else:
-        fastq_file_1 = fastq_dir + '/' + fastq_files[0]
-        fastq_file_2 = fastq_dir + '/' + fastq_files[1]
+        fastq_file_1 = fastq_files[0]
+        fastq_file_2 = fastq_files[1]
 
     if lazy_run:
        # Download existing data and see what has been done
@@ -378,7 +379,7 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
 
     # run bowtie
     run_bowtie2(sample_name, result_dir +'/' + LZW_OUT1, result_dir +'/' + LZW_OUT2,
-                bowtie_genome_s3_path, result_dir, sample_s3_output_path, lazy_run)
+                bowtie2_genome_s3_path, result_dir, sample_s3_output_path, lazy_run)
 
     # run gsnap remotely
     run_gsnapl_remotely(sample_name, EXTRACT_UNMAPPED_FROM_SAM_OUT1, EXTRACT_UNMAPPED_FROM_SAM_OUT2,
@@ -455,7 +456,7 @@ def run_star(sample_name, fastq_file_1, fastq_file_2, star_genome_s3_path,
     if not os.path.isfile("%s/%s" % (REF_DIR, genome_file)):
         execute_command("aws s3 cp %s %s/" % (star_genome_s3_path, REF_DIR))
         execute_command("cd %s; tar xvfz %s" % (REF_DIR, genome_file))
-    star_command_params = ['cd', SCRATCH_DIR, ';', STAR,
+    star_command_params = ['cd', scratch_dir, ';', STAR,
                     '--outFilterMultimapNmax', '99999',
                     '--outFilterScoreMinOverLread', '0.5',
                     '--outFilterMatchNminOverLread', '0.5',
@@ -617,6 +618,7 @@ def run_gsnapl_remotely(sample, input_fa_1, input_fa_2,
     remote_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "%s"' % (key_path, GSNAPL_INSTANCE_IP, commands)
     execute_command(remote_command)
     # move gsnapl output back to local
+    time.sleep(10)
     execute_command("aws s3 cp %s/%s %s/" % (sample_s3_output_path, GSNAPL_OUT, result_dir))
 
 
@@ -628,7 +630,7 @@ def run_annotate_m8_with_taxids(sample_name, input_m8, output_m8,
         if os.path.isfile(output_m8):
             return 1
     accession2taxid_gz = os.path.basename(accession2taxid_s3_path)
-    accession2taxid_path = REF_DIR + '/' + accession2taxid_file[:-3]
+    accession2taxid_path = REF_DIR + '/' + accession2taxid_gz[:-3]
     if not os.path.isfile(accession2taxid_path):
         execute_command("aws s3 cp %s %s/" % (accession2taxid_s3_path, REF_DIR))
         execute_command("cd %s; gunzip %s" % (REF_DIR, accession2taxid_gz))
@@ -655,7 +657,7 @@ def run_rapsearch2_remotely(sample, input_fasta,
         if os.path.isfile(output):
             return 1
     key_name = os.path.basename(rapsearch_ssh_key_s3_path)
-    execute_command("aws s3 cp %s %s/" % (gsnap_ssh_key_s3_path, REF_DIR))
+    execute_command("aws s3 cp %s %s/" % (rapsearch_ssh_key_s3_path, REF_DIR))
     key_path = REF_DIR +'/' + key_name
     execute_command("chmod 400 %s" % key_path)
     commands =  "mkdir -p /home/ec2-user/toil-pipeline-workdir/%s;" % sample
@@ -676,9 +678,10 @@ def run_rapsearch2_remotely(sample, input_fasta,
                            ';'])
     commands += "aws s3 cp /home/ec2-user/toil-pipeline-workdir/%s/%s %s/;" % \
                  (sample, RAPSEARCH2_OUT, sample_s3_output_path)
-    remote_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "%s"' % (key_path, APSEARCH2_INSTANCE_IP, commands)
+    remote_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "%s"' % (key_path, RAPSEARCH2_INSTANCE_IP, commands)
     execute_command(remote_command)
     # move gsnapl output back to local
+    time.sleep(10) # wait until the data is synced
     execute_command("aws s3 cp %s/%s %s/" % (sample_s3_output_path, RAPSEARCH2_OUT, result_dir))
 
 def run_generate_taxid_outputs_from_m8(sample_name,

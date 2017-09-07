@@ -5,7 +5,7 @@ FROM ubuntu:16.04
 MAINTAINER Yun-Fang Juan yunfang@chanzuckerberg.com
 
 # Add packages, update image, and clear cache
-RUN apt-get update && apt-get install -y build-essential curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip g++ zlib1g-dev gcc pkg-config apt-utils
+RUN apt-get update && apt-get install -y build-essential gcc g++ curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip zlib1g-dev pkg-config apt-utils
 
 RUN pip install --upgrade pip
 RUN pip install htseq==0.6.1p1
@@ -14,9 +14,9 @@ RUN pip install awscli --upgrade
 
 WORKDIR /tmp
 # install STAR
-RUN curl -L https://github.com/alexdobin/STAR/archive/2.5.2b.tar.gz | tar xz
-RUN mv STAR-2.5.2b/bin/Linux_x86_64_static/* /usr/local/bin
-RUN rm -rf STAR-2.5.2b
+RUN curl -L https://github.com/alexdobin/STAR/archive/2.5.3a.tar.gz | tar xz
+RUN mv STAR-2.5.3a/bin/Linux_x86_64_static/* /usr/local/bin
+RUN rm -rf STAR-2.5.3a
 
 # Compile and install bowtie
 RUN wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.3.2/bowtie2-2.3.2-source.zip
