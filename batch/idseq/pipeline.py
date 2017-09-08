@@ -713,7 +713,7 @@ def main():
     global INPUT_BUCKET
     global OUTPUT_BUCKET
     global KEY_S3_PATH
-    INPUT_BUCKET = os.environ.get('S3_BUCKET', INPUT_BUCKET)
+    INPUT_BUCKET = os.environ.get('INPUT_BUCKET', INPUT_BUCKET)
     OUTPUT_BUCKET = os.environ.get('OUTPUT_BUCKET', OUTPUT_BUCKET)
     KEY_S3_PATH = os.environ.get('KEY_S3_PATH', KEY_S3_PATH)
     SAMPLE = os.environ['SAMPLE']
