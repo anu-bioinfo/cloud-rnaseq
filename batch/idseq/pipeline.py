@@ -9,6 +9,7 @@ import shelve
 import argparse
 import re
 import time
+import random
 
 INPUT_BUCKET = 's3://czbiohub-infectious-disease/UGANDA'
 OUTPUT_BUCKET = 's3://yunfang-workdir/id-uganda'
@@ -36,6 +37,9 @@ BOWTIE2="bowtie2"
 LZW_FRACTION_CUTOFF = 0.45
 GSNAPL_INSTANCE_IP = '34.214.24.238'
 RAPSEARCH2_INSTANCE_IP = '35.164.185.70'
+
+GSNAPL_MAX_CONCURRENT = 5
+RAPSEARCH2_MAX_CONCURRENT = 10
 
 STAR_GENOME = 's3://cdebourcy-test/id-dryrun-reference-genomes/STAR_genome.tar.gz'
 BOWTIE2_GENOME = 's3://cdebourcy-test/id-dryrun-reference-genomes/bowtie2_genome.tar.gz'
@@ -297,6 +301,19 @@ def execute_command(command):
     output = subprocess.check_output(command, shell=True)
     return output
 
+def wait_for_server(service_name, command, max_concurrent):
+    while True:
+        output = execute_command(command).rstrip().split("\n")
+        if len(output) <= max_concurrent:
+            print "%s server has capacity. Kicking off " % service_name
+            return
+        else:
+            wait_seconds = random.randint(30, 60)
+            print "%s server busy. %d processes running. Wait for %d seconds" % \
+                  (service_name, len(output), wait_seconds)
+            time.sleep(wait_seconds)
+
+
 def run_sample(sample_s3_input_path, sample_s3_output_path,
                star_genome_s3_path, bowtie2_genome_s3_path,
                gsnap_ssh_key_s3_path, rapsearch_ssh_key_s3_path, accession2taxid_s3_path,
@@ -391,7 +408,7 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
     # run rapsearch remotely
     run_rapsearch2_remotely(sample_name, FILTER_DEUTEROSTOME_FROM_TAXID_ANNOTATED_FASTA_OUT,
                            rapsearch_ssh_key_s3_path,
-                           result_dir, sample_s3_output_path, lazy_run=False)
+                           result_dir, sample_s3_output_path, lazy_run)
 
     # run_annotate_m8_with_taxids
     run_annotate_m8_with_taxids(sample_name,
@@ -593,9 +610,10 @@ def run_gsnapl_remotely(sample, input_fa_1, input_fa_2,
                  (sample, GSNAPL_OUT, sample_s3_output_path)
     # check if remote machins has enough capacoty
 
-    check_command = 'ssh -o "StrictHostKeyCheckiyyng no" -i %s ec2-user@%s "ps aux|grep gsnapl|grep -v bash"' % (key_path, GSNAPL_INSTANCE_IP)
+    check_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "ps aux|grep gsnapl|grep -v bash"' % (key_path, GSNAPL_INSTANCE_IP)
+    wait_for_server('GSNAPL', check_command, GSNAPL_MAX_CONCURRENT)
 
-    remote_command = 'ssh -o "StrictHostKeyCheckiyyng no" -i %s ec2-user@%s "%s"' % (key_path, GSNAPL_INSTANCE_IP, commands)
+    remote_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "%s"' % (key_path, GSNAPL_INSTANCE_IP, commands)
     execute_command(remote_command)
     # move gsnapl output back to local
     time.sleep(10)
@@ -654,10 +672,12 @@ def run_rapsearch2_remotely(sample, input_fasta,
                            '-v','1',
                            '-z', str(multiprocessing.cpu_count()), # threads
                            '-q', input_path,
-                           '-o', output_path,
+                           '-o', output_path[:-3],
                            ';'])
     commands += "aws s3 cp /home/ec2-user/batch-pipeline-workdir/%s/%s %s/;" % \
                  (sample, RAPSEARCH2_OUT, sample_s3_output_path)
+    check_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "ps aux|grep rapsearch|grep -v bash"' % (key_path, RAPSEARCH2_INSTANCE_IP)
+    wait_for_server('RAPSEARCH2', check_command, RAPSEARCH2_MAX_CONCURRENT)
     remote_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "%s"' % (key_path, RAPSEARCH2_INSTANCE_IP, commands)
     execute_command(remote_command)
     # move gsnapl output back to local
