@@ -9,6 +9,7 @@ import shelve
 import argparse
 import re
 import time
+import random
 
 INPUT_BUCKET = 's3://czbiohub-infectious-disease/UGANDA'
 OUTPUT_BUCKET = 's3://yunfang-workdir/id-uganda'
@@ -35,7 +36,10 @@ BOWTIE2="bowtie2"
 
 LZW_FRACTION_CUTOFF = 0.45
 GSNAPL_INSTANCE_IP = '34.214.24.238'
-RAPSEARCH2_INSTANCE_IP = '34.214.24.238'
+RAPSEARCH2_INSTANCE_IP = '35.164.185.70'
+
+GSNAPL_MAX_CONCURRENT = 5
+RAPSEARCH2_MAX_CONCURRENT = 10
 
 STAR_GENOME = 's3://cdebourcy-test/id-dryrun-reference-genomes/STAR_genome.tar.gz'
 BOWTIE2_GENOME = 's3://cdebourcy-test/id-dryrun-reference-genomes/bowtie2_genome.tar.gz'
@@ -74,6 +78,7 @@ NT_TAXID_COUNTS_TO_JSON_OUT = 'counts.filter.deuterostomes.taxids.gsnapl.unmappe
 NT_TAXID_COUNTS_TO_SPECIES_RPM_OUT = 'species.rpm.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.csv'
 NT_TAXID_COUNTS_TO_GENUS_RPM_OUT = 'genus.rpm.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.csv'
 ANNOTATE_RAPSEARCH2_M8_WITH_TAXIDS_OUT = 'taxids.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8'
+GENERATE_TAXID_ANNOTATED_FASTA_FROM_RAPSEARCH2_M8_OUT = 'taxids.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.fasta'
 FILTER_DEUTEROSTOMES_FROM_NR_M8_OUT = 'filter.deuterostomes.taxids.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.m8'
 NR_M8_TO_TAXID_COUNTS_FILE_OUT = 'counts.filter.deuterostomes.taxids.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.csv'
 NR_TAXID_COUNTS_TO_JSON_OUT = 'counts.filter.deuterostomes.taxids.rapsearch2.filter.deuterostomes.taxids.gsnapl.unmapped.bowtie2.lzw.cdhitdup.priceseqfilter.unmapped.star.json'
@@ -107,7 +112,7 @@ def lzw_fraction(sequence):
         results.append(dictionary[word])
     return float(len(results))/len(sequence)
 
-def generate_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_file, annotation_prefix):
+def generate_taxid_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_file, annotation_prefix):
     '''Tag reads based on the m8 output'''
     # Example:  generate_annotated_fasta_from_m8('filter.unmapped.merged.fasta',
     #  'bowtie.unmapped.star.gsnapl-nt-k16.m8', 'NT-filter.unmapped.merged.fasta', 'NT')
@@ -115,6 +120,8 @@ def generate_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_fil
     read_to_accession_id = {}
     with open(m8_file, 'rb') as m8f:
         for line in m8f:
+            if line[0] == '#':
+                continue
             parts = line.split("\t")
             read_name = parts[0]
             read_name_parts = read_name.split("/")
@@ -133,37 +140,6 @@ def generate_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_fil
         read_id = sequence_name.rstrip().lstrip('>')
         accession = read_to_accession_id.get(read_id, '')
         new_read_name = annotation_prefix + ':' + accession + ':' + read_id
-        output_fasta_f.write(">%s\n" % new_read_name)
-        output_fasta_f.write(sequence_data)
-        sequence_name = input_fasta_f.readline()
-        sequence_data = input_fasta_f.readline()
-    input_fasta_f.close()
-    output_fasta_f.close()
-
-def generate_taxid_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_file):
-    '''Tag reads with taxid based on the m8 output'''
-    read_to_taxid = {}
-    with open(m8_file, 'rb') as m8f:
-        for line in m8f:
-            read_field = line.split("\t")[0]
-            read_field_parts = read_field.split(":", 1)
-            taxid_annot = read_field_parts[0]
-            read_name = read_field_parts[1]
-            read_name_parts = read_name.split("/")
-            if len(read_name_parts) > 1:
-                output_read_name = read_name_parts[0] + '/' + read_name_parts[-1]
-            else:
-                output_read_name = read_name
-            read_to_taxid[output_read_name] = taxid_annot
-    # Go through the input_fasta_file to get the results and tag reads
-    input_fasta_f = open(input_fasta_file, 'rb')
-    output_fasta_f = open(output_fasta_file, 'wb')
-    sequence_name = input_fasta_f.readline()
-    sequence_data = input_fasta_f.readline()
-    while len(sequence_name) > 0 and len(sequence_data) > 0:
-        read_id = sequence_name.rstrip().lstrip('>')
-        taxid_annot = read_to_taxid.get(read_id, 'taxid')
-        new_read_name = taxid_annot + ':' + read_id
         output_fasta_f.write(">%s\n" % new_read_name)
         output_fasta_f.write(sequence_data)
         sequence_name = input_fasta_f.readline()
@@ -308,6 +284,8 @@ def generate_taxid_annotated_m8(input_m8, output_m8, accession2taxid_db):
     outf = open(output_m8, "wb")
     with open(input_m8, "rb") as m8f:
         for line in m8f:
+            if line[0] == '#':
+                continue
             parts = line.split("\t")
             read_name = parts[0] # Example: HWI-ST640:828:H917FADXX:2:1108:8883:88679/1/1',
             accession_id = parts[1] # Example: CP000671.1',
@@ -322,6 +300,19 @@ def execute_command(command):
     print command
     output = subprocess.check_output(command, shell=True)
     return output
+
+def wait_for_server(service_name, command, max_concurrent):
+    while True:
+        output = execute_command(command).rstrip().split("\n")
+        if len(output) <= max_concurrent:
+            print "%s server has capacity. Kicking off " % service_name
+            return
+        else:
+            wait_seconds = random.randint(30, 60)
+            print "%s server busy. %d processes running. Wait for %d seconds" % \
+                  (service_name, len(output), wait_seconds)
+            time.sleep(wait_seconds)
+
 
 def run_sample(sample_s3_input_path, sample_s3_output_path,
                star_genome_s3_path, bowtie2_genome_s3_path,
@@ -394,14 +385,15 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
                                 result_dir + '/' + GSNAPL_OUT,
                                 result_dir + '/' + ANNOTATE_GSNAPL_M8_WITH_TAXIDS_OUT,
                                 accession2taxid_s3_path,
-                                result_dir, sample_s3_output_path, lazy_run)
+                                result_dir, sample_s3_output_path, lazy_run=False)
 
     # run_generate_taxid_annotated_fasta_from_m8
     run_generate_taxid_annotated_fasta_from_m8(sample_name,
-        result_dir + '/' + ANNOTATE_GSNAPL_M8_WITH_TAXIDS_OUT,
+        result_dir + '/' + GSNAPL_OUT,
         result_dir + '/' + EXTRACT_UNMAPPED_FROM_SAM_OUT3,
         result_dir + '/' + FILTER_DEUTEROSTOME_FROM_TAXID_ANNOTATED_FASTA_OUT,
-        result_dir, sample_s3_output_path, lazy_run)
+        'NT',
+        result_dir, sample_s3_output_path, lazy_run=False)
 
     run_generate_taxid_outputs_from_m8(sample_name,
         result_dir + '/' + ANNOTATE_GSNAPL_M8_WITH_TAXIDS_OUT,
@@ -411,7 +403,7 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
         result_dir + '/' + NT_TAXID_COUNTS_TO_SPECIES_RPM_OUT,
         result_dir + '/' + NT_TAXID_COUNTS_TO_GENUS_RPM_OUT,
         taxid2info_s3_path,
-        result_dir, sample_s3_output_path, lazy_run)
+        result_dir, sample_s3_output_path, lazy_run=False)
 
     # run rapsearch remotely
     run_rapsearch2_remotely(sample_name, FILTER_DEUTEROSTOME_FROM_TAXID_ANNOTATED_FASTA_OUT,
@@ -423,16 +415,15 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
                                 result_dir + '/' + RAPSEARCH2_OUT,
                                 result_dir + '/' + ANNOTATE_RAPSEARCH2_M8_WITH_TAXIDS_OUT,
                                 accession2taxid_s3_path,
-                                result_dir, sample_s3_output_path, lazy_run)
+                                result_dir, sample_s3_output_path, lazy_run=False)
 
     # run_generate_taxid_annotated_fasta_from_m8
-    ''' Note: Not annotating fasta after rapsearch for some reason. ask Charles
     run_generate_taxid_annotated_fasta_from_m8(sample_name,
-        result_dir + '/' + ANNOTATE_RAPSEARCH2_M8_WITH_TAXIDS_OUT,
+        result_dir + '/' + RAPSEARCH2_OUT,
         result_dir + '/' + FILTER_DEUTEROSTOME_FROM_TAXID_ANNOTATED_FASTA_OUT,
-        result_dir + '/' + ?
-        result_dir, sample_s3_output_path, lazy_run)
-    '''
+        result_dir + '/' + GENERATE_TAXID_ANNOTATED_FASTA_FROM_RAPSEARCH2_M8_OUT,
+        'NR',
+        result_dir, sample_s3_output_path, lazy_run=False)
 
     run_generate_taxid_outputs_from_m8(sample_name,
         result_dir + '/' + ANNOTATE_RAPSEARCH2_M8_WITH_TAXIDS_OUT,
@@ -442,7 +433,7 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
         result_dir + '/' + NR_TAXID_COUNTS_TO_SPECIES_RPM_OUT,
         result_dir + '/' + NR_TAXID_COUNTS_TO_GENUS_RPM_OUT,
         taxid2info_s3_path,
-        result_dir, sample_s3_output_path, lazy_run)
+        result_dir, sample_s3_output_path, lazy_run=False)
 
 def run_star(sample_name, fastq_file_1, fastq_file_2, star_genome_s3_path,
              result_dir, scratch_dir, sample_s3_output_path, lazy_run):
@@ -601,10 +592,10 @@ def run_gsnapl_remotely(sample, input_fa_1, input_fa_2,
     execute_command("aws s3 cp %s %s/" % (gsnap_ssh_key_s3_path, REF_DIR))
     key_path = REF_DIR +'/' + key_name
     execute_command("chmod 400 %s" % key_path)
-    commands =  "mkdir -p /home/ec2-user/toil-pipeline-workdir/%s;" % sample
-    commands += "aws s3 cp %s/%s /home/ec2-user/toil-pipeline-workdir/%s/ ; " % \
+    commands =  "mkdir -p /home/ec2-user/batch-pipeline-workdir/%s;" % sample
+    commands += "aws s3 cp %s/%s /home/ec2-user/batch-pipeline-workdir/%s/ ; " % \
                  (sample_s3_output_path, input_fa_1, sample)
-    commands += "aws s3 cp %s/%s /home/ec2-user/toil-pipeline-workdir/%s/ ; " % \
+    commands += "aws s3 cp %s/%s /home/ec2-user/batch-pipeline-workdir/%s/ ; " % \
                  (sample_s3_output_path, input_fa_2, sample)
     commands += " ".join(['/home/ec2-user/bin/gsnapl',
                           '-A', 'm8', '--batch=2',
@@ -612,11 +603,15 @@ def run_gsnapl_remotely(sample, input_fa_1, input_fa_2,
                           '-t', str(multiprocessing.cpu_count()),
                           '--maxsearch=5', '--max-mismatches=20',
                           '-D', '/home/ec2-user/share', '-d', 'nt_k16',
-                          '/home/ec2-user/toil-pipeline-workdir/'+sample+'/'+input_fa_1,
-                          '/home/ec2-user/toil-pipeline-workdir/'+sample+'/'+input_fa_2,
-                          '> /home/ec2-user/toil-pipeline-workdir/'+sample+'/'+GSNAPL_OUT, ';'])
-    commands += "aws s3 cp /home/ec2-user/toil-pipeline-workdir/%s/%s %s/;" % \
+                          '/home/ec2-user/batch-pipeline-workdir/'+sample+'/'+input_fa_1,
+                          '/home/ec2-user/batch-pipeline-workdir/'+sample+'/'+input_fa_2,
+                          '> /home/ec2-user/batch-pipeline-workdir/'+sample+'/'+GSNAPL_OUT, ';'])
+    commands += "aws s3 cp /home/ec2-user/batch-pipeline-workdir/%s/%s %s/;" % \
                  (sample, GSNAPL_OUT, sample_s3_output_path)
+    # check if remote machins has enough capacoty
+
+    check_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "ps aux|grep gsnapl|grep -v bash"' % (key_path, GSNAPL_INSTANCE_IP)
+    wait_for_server('GSNAPL', check_command, GSNAPL_MAX_CONCURRENT)
 
     remote_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "%s"' % (key_path, GSNAPL_INSTANCE_IP, commands)
     execute_command(remote_command)
@@ -642,13 +637,13 @@ def run_annotate_m8_with_taxids(sample_name, input_m8, output_m8,
     execute_command("aws s3 cp %s %s/" % (output_m8, sample_s3_output_path))
 
 def run_generate_taxid_annotated_fasta_from_m8(sample_name, input_m8, input_fasta,
-    output_fasta, result_dir, sample_s3_output_path, lazy_run):
+    output_fasta, annotation_prefix, result_dir, sample_s3_output_path, lazy_run):
 
     if lazy_run:
         # check if output already exists
         if os.path.isfile(output_fasta):
             return 1
-    generate_taxid_annotated_fasta_from_m8(input_fasta, input_m8, output_fasta)
+    generate_taxid_annotated_fasta_from_m8(input_fasta, input_m8, output_fasta, annotation_prefix)
     # move it the output back to S3
     execute_command("aws s3 cp %s %s/" % (output_fasta, sample_s3_output_path))
 
@@ -663,11 +658,11 @@ def run_rapsearch2_remotely(sample, input_fasta,
     execute_command("aws s3 cp %s %s/" % (rapsearch_ssh_key_s3_path, REF_DIR))
     key_path = REF_DIR +'/' + key_name
     execute_command("chmod 400 %s" % key_path)
-    commands =  "mkdir -p /home/ec2-user/toil-pipeline-workdir/%s;" % sample
-    commands += "aws s3 cp %s/%s /home/ec2-user/toil-pipeline-workdir/%s/ ; " % \
+    commands =  "mkdir -p /home/ec2-user/batch-pipeline-workdir/%s;" % sample
+    commands += "aws s3 cp %s/%s /home/ec2-user/batch-pipeline-workdir/%s/ ; " % \
                  (sample_s3_output_path, input_fasta, sample)
-    input_path = '/home/ec2-user/toil-pipeline-workdir/' + sample + '/' + input_fasta
-    output_path = '/home/ec2-user/toil-pipeline-workdir/' + sample + '/' + RAPSEARCH2_OUT
+    input_path = '/home/ec2-user/batch-pipeline-workdir/' + sample + '/' + input_fasta
+    output_path = '/home/ec2-user/batch-pipeline-workdir/' + sample + '/' + RAPSEARCH2_OUT
     commands += " ".join(['/home/ec2-user/bin/rapsearch',
                           '-d', '/home/ec2-user/references/nr_rapsearch/nr_rapsearch',
                           '-e','-6',
@@ -677,10 +672,12 @@ def run_rapsearch2_remotely(sample, input_fasta,
                            '-v','1',
                            '-z', str(multiprocessing.cpu_count()), # threads
                            '-q', input_path,
-                           '-o', output_path,
+                           '-o', output_path[:-3],
                            ';'])
-    commands += "aws s3 cp /home/ec2-user/toil-pipeline-workdir/%s/%s %s/;" % \
+    commands += "aws s3 cp /home/ec2-user/batch-pipeline-workdir/%s/%s %s/;" % \
                  (sample, RAPSEARCH2_OUT, sample_s3_output_path)
+    check_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "ps aux|grep rapsearch|grep -v bash"' % (key_path, RAPSEARCH2_INSTANCE_IP)
+    wait_for_server('RAPSEARCH2', check_command, RAPSEARCH2_MAX_CONCURRENT)
     remote_command = 'ssh -o "StrictHostKeyChecking no" -i %s ec2-user@%s "%s"' % (key_path, RAPSEARCH2_INSTANCE_IP, commands)
     execute_command(remote_command)
     # move gsnapl output back to local
