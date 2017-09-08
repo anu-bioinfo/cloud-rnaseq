@@ -107,7 +107,7 @@ def lzw_fraction(sequence):
         results.append(dictionary[word])
     return float(len(results))/len(sequence)
 
-def generate_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_file, annotation_prefix):
+def generate_taxid_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_file, annotation_prefix):
     '''Tag reads based on the m8 output'''
     # Example:  generate_annotated_fasta_from_m8('filter.unmapped.merged.fasta',
     #  'bowtie.unmapped.star.gsnapl-nt-k16.m8', 'NT-filter.unmapped.merged.fasta', 'NT')
@@ -133,37 +133,6 @@ def generate_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_fil
         read_id = sequence_name.rstrip().lstrip('>')
         accession = read_to_accession_id.get(read_id, '')
         new_read_name = annotation_prefix + ':' + accession + ':' + read_id
-        output_fasta_f.write(">%s\n" % new_read_name)
-        output_fasta_f.write(sequence_data)
-        sequence_name = input_fasta_f.readline()
-        sequence_data = input_fasta_f.readline()
-    input_fasta_f.close()
-    output_fasta_f.close()
-
-def generate_taxid_annotated_fasta_from_m8(input_fasta_file, m8_file, output_fasta_file):
-    '''Tag reads with taxid based on the m8 output'''
-    read_to_taxid = {}
-    with open(m8_file, 'rb') as m8f:
-        for line in m8f:
-            read_field = line.split("\t")[0]
-            read_field_parts = read_field.split(":", 1)
-            taxid_annot = read_field_parts[0]
-            read_name = read_field_parts[1]
-            read_name_parts = read_name.split("/")
-            if len(read_name_parts) > 1:
-                output_read_name = read_name_parts[0] + '/' + read_name_parts[-1]
-            else:
-                output_read_name = read_name
-            read_to_taxid[output_read_name] = taxid_annot
-    # Go through the input_fasta_file to get the results and tag reads
-    input_fasta_f = open(input_fasta_file, 'rb')
-    output_fasta_f = open(output_fasta_file, 'wb')
-    sequence_name = input_fasta_f.readline()
-    sequence_data = input_fasta_f.readline()
-    while len(sequence_name) > 0 and len(sequence_data) > 0:
-        read_id = sequence_name.rstrip().lstrip('>')
-        taxid_annot = read_to_taxid.get(read_id, 'taxid')
-        new_read_name = taxid_annot + ':' + read_id
         output_fasta_f.write(">%s\n" % new_read_name)
         output_fasta_f.write(sequence_data)
         sequence_name = input_fasta_f.readline()
@@ -401,6 +370,7 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
         result_dir + '/' + ANNOTATE_GSNAPL_M8_WITH_TAXIDS_OUT,
         result_dir + '/' + EXTRACT_UNMAPPED_FROM_SAM_OUT3,
         result_dir + '/' + FILTER_DEUTEROSTOME_FROM_TAXID_ANNOTATED_FASTA_OUT,
+        'NT',
         result_dir, sample_s3_output_path, lazy_run)
 
     run_generate_taxid_outputs_from_m8(sample_name,
@@ -430,7 +400,8 @@ def run_sample(sample_s3_input_path, sample_s3_output_path,
     run_generate_taxid_annotated_fasta_from_m8(sample_name,
         result_dir + '/' + ANNOTATE_RAPSEARCH2_M8_WITH_TAXIDS_OUT,
         result_dir + '/' + FILTER_DEUTEROSTOME_FROM_TAXID_ANNOTATED_FASTA_OUT,
-        result_dir + '/' + ?
+        result_dir + '/' + ?,
+        'NR',
         result_dir, sample_s3_output_path, lazy_run)
     '''
 
@@ -642,13 +613,13 @@ def run_annotate_m8_with_taxids(sample_name, input_m8, output_m8,
     execute_command("aws s3 cp %s %s/" % (output_m8, sample_s3_output_path))
 
 def run_generate_taxid_annotated_fasta_from_m8(sample_name, input_m8, input_fasta,
-    output_fasta, result_dir, sample_s3_output_path, lazy_run):
+    output_fasta, annotation_prefix, result_dir, sample_s3_output_path, lazy_run):
 
     if lazy_run:
         # check if output already exists
         if os.path.isfile(output_fasta):
             return 1
-    generate_taxid_annotated_fasta_from_m8(input_fasta, input_m8, output_fasta)
+    generate_taxid_annotated_fasta_from_m8(input_fasta, input_m8, output_fasta, annotation_prefix)
     # move it the output back to S3
     execute_command("aws s3 cp %s %s/" % (output_fasta, sample_s3_output_path))
 
