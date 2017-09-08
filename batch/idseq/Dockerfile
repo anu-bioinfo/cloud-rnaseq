@@ -5,7 +5,7 @@ FROM ubuntu:16.04
 MAINTAINER Yun-Fang Juan yunfang@chanzuckerberg.com
 
 # Add packages, update image, and clear cache
-RUN apt-get update && apt-get install -y build-essential gcc g++ curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip zlib1g-dev pkg-config apt-utils
+RUN apt-get update && apt-get install -y build-essential curl wget python-pip python-dev python-scipy python-redis gdebi-core zip unzip g++ zlib1g-dev gcc pkg-config apt-utils jq
 
 RUN pip install --upgrade pip
 RUN pip install htseq==0.6.1p1
