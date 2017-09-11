@@ -48,9 +48,8 @@ ACCESSION2TAXID = 's3://cdebourcy-test/id-dryrun-reference-genomes/accession2tax
 DEUTEROSTOME_TAXIDS = 's3://cdebourcy-test/id-dryrun-reference-genomes/lineages-2017-03-17_deuterostome_taxIDs.txt'
 TAXID_TO_INFO = 's3://cdebourcy-test/id-dryrun-reference-genomes/taxon_info.db'
 
-TAXID_TO_SPECIESID = 's3://cdebourcy-test/id-dryrun-reference-genomes/categories.dmp'
-TAXID_TO_NAME = 's3://cdebourcy-test/id-dryrun-reference-genomes/names.dmp'
-SPECIESID_TO_GENUSID = 's3://cdebourcy-test/id-dryrun-reference-genomes/nodes.dmp'
+TAX_LEVEL_SPECIES = 1
+TAX_LEVEL_GENUS = 2
 
 #output files
 STAR_OUT1 = 'unmapped.star.1.fq'
@@ -258,6 +257,8 @@ def generate_json_from_taxid_counts(sample, rawReadsInputPath, taxidCountsInputP
     total_reads = 2*int(total_reads.rstrip())/4
     taxon_counts_attributes = []
     remaining_reads = 0
+    genus_to_count = {}
+    genus_to_name = {}
     with open(taxidCountsInputPath) as f:
         for line in f:
             tok = line.rstrip().split(",")
@@ -265,16 +266,27 @@ def generate_json_from_taxid_counts(sample, rawReadsInputPath, taxidCountsInputP
             count = float(tok[1])
             species_taxid, genus_taxid, scientific_name = taxid2info_map.get(taxid, ("NA", "NA", "NA"))
             remaining_reads = remaining_reads + count
+            genus_to_count[genus_taxid] = genus_to_count.get(genus_taxid, 0) + count
+            genus_to_name[genus_taxid]  = scientific_name.split(" ")[0]
+
             taxon_counts_attributes.append({"tax_id": taxid,
-                                            "tax_level": 0, # placeholder
+                                            "tax_level": TAX_LEVEL_SPECIES,
                                             "count": count,
                                             "name": scientific_name,
                                             "count_type": countType})
+    for (tax_id, count) in genus_to_count.iteritems():
+        genus_name = genus_to_name[tax_id]
+        taxon_counts_attributes.append({"tax_id": taxid,
+                                        "tax_level": TAX_LEVEL_GENUS,
+                                        "count": count,
+                                        "name": genus_name,
+                                        "count_type": countType})
+
     output_dict = {
         "pipeline_output": {
             "total_reads": total_reads,
             "remaining_reads": remaining_reads,
-            "sample_id": dbSampleId, # placeholder
+            "sample_id": dbSampleId,
             "taxon_counts_attributes": taxon_counts_attributes
       }
     }
