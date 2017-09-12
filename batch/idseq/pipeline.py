@@ -264,12 +264,12 @@ def generate_json_from_taxid_counts(sample, rawReadsInputPath, taxidCountsInputP
             tok = line.rstrip().split(",")
             taxid = tok[0]
             count = float(tok[1])
-            species_taxid, genus_taxid, scientific_name = taxid2info_map.get(taxid, ("NA", "NA", "NA"))
+            species_taxid, genus_taxid, scientific_name = taxid2info_map.get(taxid, ("-1", "-2", "NA"))
             remaining_reads = remaining_reads + count
             genus_to_count[genus_taxid] = genus_to_count.get(genus_taxid, 0) + count
             genus_to_name[genus_taxid]  = scientific_name.split(" ")[0]
 
-            taxon_counts_attributes.append({"tax_id": taxid,
+            taxon_counts_attributes.append({"tax_id": species_taxid,
                                             "tax_level": TAX_LEVEL_SPECIES,
                                             "count": count,
                                             "name": scientific_name,
