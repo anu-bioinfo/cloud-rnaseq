@@ -259,6 +259,8 @@ def generate_json_from_taxid_counts(sample, rawReadsInputPath, taxidCountsInputP
     remaining_reads = 0
     genus_to_count = {}
     genus_to_name = {}
+    species_to_count = {}
+    species_to_name = {}
     with open(taxidCountsInputPath) as f:
         for line in f:
             tok = line.rstrip().split(",")
@@ -268,12 +270,17 @@ def generate_json_from_taxid_counts(sample, rawReadsInputPath, taxidCountsInputP
             remaining_reads = remaining_reads + count
             genus_to_count[genus_taxid] = genus_to_count.get(genus_taxid, 0) + count
             genus_to_name[genus_taxid]  = scientific_name.split(" ")[0]
+            species_to_count[species_taxid] = species_to_count.get(species_taxid, 0) + count
+            species_to_name[species_taxid] = scientific_name
 
-            taxon_counts_attributes.append({"tax_id": species_taxid,
-                                            "tax_level": TAX_LEVEL_SPECIES,
-                                            "count": count,
-                                            "name": scientific_name,
-                                            "count_type": countType})
+    for (taxid, count) in species_to_count.iteritems():
+        species_name = species_to_name[taxid]
+        taxon_counts_attributes.append({"tax_id": taxid,
+                                        "tax_level": TAX_LEVEL_SPECIES,
+                                        "count": count,
+                                        "name": species_name,
+                                        "count_type": countType})
+
     for (taxid, count) in genus_to_count.iteritems():
         genus_name = genus_to_name[taxid]
         taxon_counts_attributes.append({"tax_id": taxid,
