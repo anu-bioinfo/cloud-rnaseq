@@ -257,6 +257,7 @@ def generate_json_from_taxid_counts(sample, rawReadsInputPath, taxidCountsInputP
     total_reads = 2*int(total_reads.rstrip())/4
     taxon_counts_attributes = []
     remaining_reads = 0
+
     genus_to_count = {}
     genus_to_name = {}
     species_to_count = {}
@@ -738,10 +739,9 @@ def main():
     INPUT_BUCKET = os.environ.get('INPUT_BUCKET', INPUT_BUCKET)
     OUTPUT_BUCKET = os.environ.get('OUTPUT_BUCKET', OUTPUT_BUCKET)
     KEY_S3_PATH = os.environ.get('KEY_S3_PATH', KEY_S3_PATH)
-    SAMPLE = os.environ['SAMPLE']
     DB_SAMPLE_ID = os.environ['DB_SAMPLE_ID']
-    sample_s3_input_path = INPUT_BUCKET.rstrip('/') + '/' + SAMPLE
-    sample_s3_output_path = OUTPUT_BUCKET.rstrip('/') + '/' + SAMPLE
+    sample_s3_input_path = INPUT_BUCKET.rstrip('/')
+    sample_s3_output_path = OUTPUT_BUCKET.rstrip('/')
 
     run_sample(sample_s3_input_path, sample_s3_output_path,
                STAR_GENOME, BOWTIE2_GENOME,
