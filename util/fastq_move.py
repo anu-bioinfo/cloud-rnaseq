@@ -6,7 +6,7 @@ import subprocess
 import csv
 
 def move_fastqs_to_dirs(s3_path, doc_id, s3_outputpath):
-    s3_source = s3_path.rstrip('/') + '/' + doc_id + '/rawdata'
+    s3_source = s3_path.rstrip('/') + '/' + doc_id # + '/rawdata'
     s3_output_source = s3_outputpath.rstrip('/') + '/' + doc_id + '/rawdata'
     # Generate mapping
     mapping = {}
@@ -16,7 +16,7 @@ def move_fastqs_to_dirs(s3_path, doc_id, s3_outputpath):
     print command
     output = subprocess.check_output(command, shell=True).split("\n")
     for fname in output:
-        m = re.search("/rawdata/([^/]*)(_R[12]_001.fastq.gz)", fname)
+        m = re.search("/([^/]*)(_R[12]_001.fastq.gz)", fname)
         if m:
             sample = m.group(1)
             fastq_name = m.group(1) + m.group(2)
