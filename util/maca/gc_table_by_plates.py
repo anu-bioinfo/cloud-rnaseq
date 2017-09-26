@@ -194,7 +194,10 @@ def output_logs_to_csv(log_table, log_csv, headers):
         for idx in range(len(headers)):
             row = [headers[idx]]
             for cell in cells:
-                row.append(cell['data'][idx])
+                if idx < len(cell['data']):
+                    row.append(cell['data'][idx])
+                else:
+                    row.append(0)
             gc_writer.writerow(row)
 
 # TODO(yf): the following two functions are basically identical. deduplicate
