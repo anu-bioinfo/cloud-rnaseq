@@ -49,6 +49,7 @@ COMMON_PARS="--outFilterType BySJout \
 HTSEQ_THREADS_MAX = 4
 CURR_MIN_VER = 20170301
 
+
 def run_sample(sample_name, doc_id, force_download = False):
     ''' Example:
        run_sample(SRR1974579, 200067835)
@@ -174,6 +175,7 @@ class htseqThread(threading.Thread):
 
         sys.stdout.flush()
 
+
 def runHtseq(htseq_jobs):
     threads = []
     for htseqParams in htseq_jobs:
@@ -184,9 +186,14 @@ def runHtseq(htseq_jobs):
     for t in threads:
         t.join()
 
-def run(doc_ids    , num_partitions, partition_id):
+
+def run(doc_ids, num_partitions, partition_id):
     htseq_jobs = []
     for doc_id in doc_ids:
+        if doc_id.startswith('Undetermined'):
+            print "Skipping file: %s" % doc_id
+            continue
+
         print "Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id)
         command = "aws s3 ls %s/%s/rawdata/" % (S3_BUCKET, doc_id)
         print command
@@ -205,7 +212,6 @@ def run(doc_ids    , num_partitions, partition_id):
         for sample_name in sample_list:
             if idx % num_partitions == partition_id:
                 try:
-                #if True:
                     ret = run_sample(sample_name, doc_id)
                     print "%s : %s " % (doc_id, sample_name)
                     if ret is not None:
@@ -216,10 +222,11 @@ def run(doc_ids    , num_partitions, partition_id):
 
                 except subprocess.CalledProcessError, e:
                     print "Error processing stdout output: %s for sample %s\n" % (e.output, sample_name)
-                except Exception:
+                except:
                     print "Error processing %s. " % sample_name
 
             idx += 1
+
     runHtseq(htseq_jobs)
 
 
