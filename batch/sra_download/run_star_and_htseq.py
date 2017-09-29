@@ -5,6 +5,7 @@ import os
 import sys
 import thread
 import time
+import datetime
 
 from Bio import Entrez
 
@@ -49,8 +50,7 @@ COMMON_PARS="--outFilterType BySJout \
 --readFilesCommand zcat"
 
 HTSEQ_THREADS_MAX = 4
-CURR_MIN_VER = 20170301
-
+CURR_MIN_VER = datetime.date(2017, 3, 1)
 
 def maybe_log(msg, logger=None, **args):
     if logger is not None:
@@ -58,29 +58,10 @@ def maybe_log(msg, logger=None, **args):
     print msg
 
 
-def run_sample(sample_name, doc_id, force_download=False, logger=None):
+def run_sample(sample_name, doc_id, logger=None):
     """Example:
        run_sample(SRR1974579, 200067835)
     """
-
-
-    # Check if star has been run
-    if not force_download:
-        s3_dest = S3_BUCKET + '/' + doc_id + '/results/'
-        command = "aws s3 ls %s | grep %s.%s.htseq" % (s3_dest, sample_name, TAXON)
-        maybe_log(command, logger)
-        try:
-            output = subprocess.check_output(command, shell=True)
-            maybe_log(output, logger)
-            if len(output) > 10:
-                # sample has been downloaded before
-                dateint = int(output[0:10].replace('-', ''))
-                if dateint > CURR_MIN_VER:
-                    maybe_log("%s exists, skipping" % sample_name)
-                    return
-        except Exception:
-            # No big deal. S3 error
-            maybe_log("%s doesn't exist yet" % sample_name, logger)
 
     dest_dir = DEST_DIR + sample_name
     subprocess.check_output("mkdir -p %s" % dest_dir, shell=True)
@@ -217,6 +198,20 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
             maybe_log("Skipping file: %s" % doc_id, logger)
             continue
 
+        # Check the doc_id folder for existing runs
+        command = "aws s3 ls %s/".format(
+                os.path.join(S3_BUCKET, doc_id, 'results')
+        )
+        maybe_log(command, logger)
+        output = subprocess.check_output(command, shell=True)
+        maybe_log(output, logger)
+
+        output_files = {(line[:10].splt('-'), line.split()[-1])
+                        for line in output.split('\n')
+                        if line.strip().endswith('htseq-count.txt')}
+        output_files = {fn for dt,fn in output_files
+                        if datetime.date(*map(int, dt)) > CURR_MIN_VER}
+
         maybe_log("Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id), logger)
         command = "aws s3 ls %s/%s/rawdata/" % (S3_BUCKET, doc_id)
         maybe_log(command, logger)
@@ -231,26 +226,26 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
             matched = re.search("\s([\d\w\-\.]+)\/",f)
             if matched:
                 sample_list.append(matched.group(1))
-        idx = 0
-        for sample_name in sample_list:
-            if idx % num_partitions == partition_id:
-                try:
-                    ret = run_sample(sample_name, doc_id)
-                    maybe_log("%s : %s " % (doc_id, sample_name), logger)
-                    if ret is not None:
-                        htseq_jobs.append(ret)
-                    if len(htseq_jobs) >= HTSEQ_THREADS_MAX:
-                        runHtseq(htseq_jobs, logger)
-                        htseq_jobs = []
+        for sample_name in sample_list[partition_id::num_partitions]:
+            if '{}.{}.htseq-count.txt'.format(sample_name, TAXON) in output_files:
+                continue
 
-                except subprocess.CalledProcessError, e:
-                    maybe_log("Error processing stdout output: %s for sample %s\n" % (e.output, sample_name), logger)
-                except:
-                    maybe_log("Error processing %s. " % sample_name, logger, exc_info=True)
+            try:
+                ret = run_sample(sample_name, doc_id)
+                maybe_log("%s : %s " % (doc_id, sample_name), logger)
+                if ret is not None:
+                    htseq_jobs.append(ret)
+                if len(htseq_jobs) >= HTSEQ_THREADS_MAX:
+                    runHtseq(htseq_jobs, logger)
+                    htseq_jobs = []
 
-            idx += 1
+            except subprocess.CalledProcessError, e:
+                maybe_log("Error processing stdout output: %s for sample %s\n" % (e.output, sample_name), logger)
+            except:
+                maybe_log("Error processing %s. " % sample_name, logger, exc_info=True)
 
-    runHtseq(htseq_jobs, logger)
+    if htseq_jobs:
+        runHtseq(htseq_jobs, logger)
 
 
 def main(logger=None):
@@ -260,8 +255,6 @@ def main(logger=None):
     if os.environ.get('AWS_BATCH_JOB_ID'):
         ROOT_DIR = ROOT_DIR + '/' + os.environ['AWS_BATCH_JOB_ID']
         DEST_DIR = ROOT_DIR + '/data/hca/'
-
-
 
     global GENOME_DIR
     global GENOME_FASTA
