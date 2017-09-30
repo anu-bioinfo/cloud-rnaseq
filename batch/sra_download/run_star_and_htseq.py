@@ -223,14 +223,17 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
         sample_list = []
 
         for f in output:
-            matched = re.search("\s([\d\w\-\.]+)\/",f)
+            matched = re.search("\s([\d\w\-\.]+)\/", f)
             if matched:
                 sample_list.append(matched.group(1))
+
         for sample_name in sample_list[partition_id::num_partitions]:
             if '{}.{}.htseq-count.txt'.format(sample_name, TAXON) in output_files:
+                maybe_log("{} already exists, skipping".format(sample_name, logger))
                 continue
 
             try:
+                maybe_log("Running sample {}".format(sample_name), logger)
                 ret = run_sample(sample_name, doc_id)
                 maybe_log("%s : %s " % (doc_id, sample_name), logger)
                 if ret is not None:
