@@ -223,7 +223,7 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
         sample_list = []
 
         for f in output:
-            matched = re.search("\s([\d\w\-\.]+)\/", f)
+            matched = re.search("\s([\d\w\-.]+)/", f)
             if matched:
                 sample_list.append(matched.group(1))
 
@@ -264,21 +264,37 @@ def main(logger=None):
     global SJDB_GTF
     global TAXON
 
-    GENOME_DIR = ROOT_DIR + "/genome/STAR/HG38-PLUS/" # change
-    GENOME_FASTA = ROOT_DIR + "/genome/hg38-plus/hg38-plus.fa" # change
-    SJDB_GTF = ROOT_DIR + "/genome/hg38-plus/hg38-plus.gtf" # change
+    taxon = os.environ.get('TAXON', 'homo')
+    if taxon == 'homo':
+        GENOME_DIR = ROOT_DIR + "/genome/STAR/HG38-PLUS/" # change
+        GENOME_FASTA = ROOT_DIR + "/genome/hg38-plus/hg38-plus.fa" # change
+        SJDB_GTF = ROOT_DIR + "/genome/hg38-plus/hg38-plus.gtf" # change
+        TAXON = 'homo'
 
-    ref_genome_file = 'hg38-plus.tgz'
-    ref_genome_star_file = 'HG38-PLUS.tgz'
-
-    taxon   = os.environ['TAXON']
-    if taxon == 'mus':
+        ref_genome_file = 'hg38-plus.tgz'
+        ref_genome_star_file = 'HG38-PLUS.tgz'
+    elif taxon == 'mus':
         GENOME_DIR = ROOT_DIR + "/genome/STAR/MM10-PLUS/"
-        GENOME_FASTA = ROOT_DIR + "/genome/mm10-plus/mm10-plus.fa" # change
-        SJDB_GTF = ROOT_DIR + "/genome/mm10-plus/mm10-plus.gtf" # change
+        GENOME_FASTA = ROOT_DIR + "/genome/mm10-plus/mm10-plus.fa" # change (?)
+        SJDB_GTF = ROOT_DIR + "/genome/mm10-plus/mm10-plus.gtf" # change (?)
+        TAXON = 'mus'
+
         ref_genome_file = 'mm10-plus.tgz'
         ref_genome_star_file = 'MM10-PLUS.tgz'
-        TAXON = 'mus'
+    else:
+        raise ValueError('Invalid taxon {}'.format(taxon))
+
+    maybe_log(
+            'Run Info:\n{}\n'.format(
+                    '\n'.join((GENOME_DIR, GENOME_FASTA, SJDB_GTF, TAXON,
+                               ref_genome_file, ref_genome_star_file,
+                               os.environ['S3_BUCKET'],
+                               os.environ['EXP_IDS'],
+                               os.environ['NUM_PARTITIONS'],
+                               os.environ['PARTITION_ID']))
+            ),
+            logger
+    )
 
     # download the genome data
 
@@ -290,7 +306,7 @@ def main(logger=None):
     maybe_log(command, logger)
     subprocess.check_output(command, shell=True)
 
-    command = "mkdir -p %s/genome/STAR; aws s3 cp s3://czi-hca/ref-genome/STAR/%s %s/genome/STAR" %  (ROOT_DIR, ref_genome_star_file, ROOT_DIR)
+    command = "mkdir -p %s/genome/STAR; aws s3 cp s3://czi-hca/ref-genome/STAR/%s %s/genome/STAR" % (ROOT_DIR, ref_genome_star_file, ROOT_DIR)
     maybe_log(command, logger)
     subprocess.check_output(command, shell=True)
 
@@ -315,14 +331,13 @@ def main(logger=None):
     doc_ids = os.environ['EXP_IDS'].split(",")
     run(doc_ids, num_partitions, partition_id, logger)
 
-    # Remove Genome Into Memory
+    # Remove Genome from Memory
     command = "%s --genomeDir %s --genomeLoad Remove" % (STAR, GENOME_DIR)
     maybe_log(command, logger)
     subprocess.check_output(command, shell=True)
 
 
 if __name__ == "__main__":
-
     if os.environ.get('AWS_BATCH_JOB_ID'):
         logging.basicConfig(level=logging.INFO)
         mainlogger = logging.getLogger(__name__)
@@ -344,7 +359,7 @@ if __name__ == "__main__":
 
         main(mainlogger)
 
-        command = 'aws s3 cp {} s3://jamestwebber-logs/'.format(log_file)
+        command = 'aws s3 cp {} s3://jamestwebber-logs/star_logs/'.format(log_file)
         mainlogger.info(command)
         print command
 
