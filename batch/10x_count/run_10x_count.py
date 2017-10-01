@@ -24,6 +24,14 @@ GC_TABLE_GENERATOR = 'generate_gc_table_from_cellranger.py'
 ROOT_DIR = '/mnt'
 DEST_DIR = ROOT_DIR + "/data/hca/"
 
+# files that should be uploaded outside of the massive tgz
+# path should be relative to the run folder
+files_to_upload = ['outs/raw_gene_bc_matrices_h5.h5',
+                   'outs/genes.tsv',
+                   'outs/barcodes.tsv'
+                   'outs/web_summary.html',
+                   'outs/metrics_summary.csv']
+
 def main():
 
     global ROOT_DIR
@@ -91,14 +99,12 @@ def main():
         sys.exit(1)
 
     # Move results(websummary, cell-gene table, tarball) data back to S3
-    command = "cd %s; aws s3 cp %s/outs/web_summary.html %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
-    print command
-    subprocess.check_output(command, shell=True)
-
-    command = "cd %s; aws s3 cp %s/outs/metrics_summary.csv %s/ " % (result_path, sample_id, S3_OUTPUT_DIR)
-    print command
-    subprocess.check_output(command, shell=True)
-
+    for file_name in files_to_upload:
+        command = "cd {}; aws s3 cp {} {}/".format(
+                result_path, os.path.join(sample_id, file_name), S3_OUTPUT_DIR
+        )
+        print command
+        subprocess.check_output(command, shell=True)
 
     command = "cd %s; tar cvfz %s.tgz %s" % (result_path, sample_id, sample_id)
     print command
