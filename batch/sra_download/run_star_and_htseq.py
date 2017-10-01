@@ -206,21 +206,23 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
         )
         maybe_log(command, logger)
         output = subprocess.check_output(command, shell=True)
-        maybe_log(output, logger)
 
-        output_files = {(line[:10].splt('-'), line.split()[-1])
+        output_files = {(line[:10].split('-'), line.split()[-1])
                         for line in output.split('\n')
                         if line.strip().endswith('htseq-count.txt')}
         output_files = {fn for dt,fn in output_files
                         if datetime.date(*map(int, dt)) > CURR_MIN_VER}
+        maybe_log("number of files: {}".format(len(output_files)), logger)
 
-        maybe_log("Running partition %d of %d for doc %s" % (partition_id, num_partitions, doc_id), logger)
+        maybe_log("Running partition {} of {} for doc {}".format(
+                partition_id, num_partitions, doc_id
+        ), logger)
         command = "aws s3 ls %s/%s/rawdata/" % (S3_BUCKET, doc_id)
         maybe_log(command, logger)
         try:
             output = subprocess.check_output(command, shell=True).split("\n")
         except subprocess.CalledProcessError:
-            maybe_log(output, logger, exc_info=True)
+            maybe_log("error in aws command", logger, exc_info=True)
             output = []
 
         sample_list = []
@@ -360,13 +362,14 @@ if __name__ == "__main__":
         # add the handlers to the logger
         mainlogger.addHandler(handler)
 
-        main(mainlogger)
+        try:
+            main(mainlogger)
+        finally:
+            command = 'aws s3 cp {} s3://jamestwebber-logs/star_logs/'.format(log_file)
+            mainlogger.info(command)
+            print command
 
-        command = 'aws s3 cp {} s3://jamestwebber-logs/star_logs/'.format(log_file)
-        mainlogger.info(command)
-        print command
-
-        handler.close()
-        subprocess.check_output(command, shell=True)
+            handler.close()
+            subprocess.check_output(command, shell=True)
     else:
         main()
