@@ -211,7 +211,7 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
             maybe_log("Nothing in the results directory", logger)
             output = []
 
-        output_files = {(line[:10].split('-'), line.split()[-1])
+        output_files = {(tuple(line[:10].split('-')), line.split()[-1])
                         for line in output
                         if line.strip().endswith('htseq-count.txt')}
         output_files = {fn for dt,fn in output_files
