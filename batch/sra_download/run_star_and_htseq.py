@@ -182,11 +182,13 @@ class htseqThread(threading.Thread):
 
 def runHtseq(htseq_jobs, logger):
     threads = []
+
     for htseqParams in htseq_jobs:
         maybe_log("Starting a htseq thread for %s " % htseqParams, logger)
         ht_thread = htseqThread(htseqParams, logger)
         ht_thread.start()
         threads.append(ht_thread)
+
     for t in threads:
         t.join()
 
@@ -217,7 +219,8 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
         maybe_log(command, logger)
         try:
             output = subprocess.check_output(command, shell=True).split("\n")
-        except Exception:
+        except subprocess.CalledProcessError:
+            maybe_log(output, logger, exc_info=True)
             output = []
 
         sample_list = []
