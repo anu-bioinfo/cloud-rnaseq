@@ -201,7 +201,7 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
             continue
 
         # Check the doc_id folder for existing runs
-        command = "aws s3 ls %s/".format(
+        command = "aws s3 ls {}/".format(
                 os.path.join(S3_BUCKET, doc_id, 'results')
         )
         maybe_log(command, logger)
