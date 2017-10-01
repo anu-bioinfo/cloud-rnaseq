@@ -201,14 +201,18 @@ def run(doc_ids, num_partitions, partition_id, logger=None):
             continue
 
         # Check the doc_id folder for existing runs
-        command = "aws s3 ls {}/".format(
-                os.path.join(S3_BUCKET, doc_id, 'results')
-        )
-        maybe_log(command, logger)
-        output = subprocess.check_output(command, shell=True)
+        try:
+            command = "aws s3 ls {}/".format(
+                    os.path.join(S3_BUCKET, doc_id, 'results')
+            )
+            maybe_log(command, logger)
+            output = subprocess.check_output(command, shell=True).split('\n')
+        except subprocess.CalledProcessError:
+            maybe_log("Nothing in the results directory", logger)
+            output = []
 
         output_files = {(line[:10].split('-'), line.split()[-1])
-                        for line in output.split('\n')
+                        for line in output
                         if line.strip().endswith('htseq-count.txt')}
         output_files = {fn for dt,fn in output_files
                         if datetime.date(*map(int, dt)) > CURR_MIN_VER}
