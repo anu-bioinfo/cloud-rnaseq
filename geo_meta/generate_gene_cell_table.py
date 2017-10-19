@@ -43,7 +43,7 @@ def get_htseq_files_from_s3(doc_id):
     print command
     output = subprocess.check_output(command, shell=True)
 
-    command = "ls _tmp/%s/*.htseq-count.txt" % doc_id
+    command = "find _tmp/%s/ |grep .htseq-count.txt" % doc_id
     output = subprocess.check_output(command, shell=True)
     if output:
         htseq_files = output.rstrip().split("\n")
@@ -56,7 +56,7 @@ def get_log_files_from_s3(doc_id):
     print command
     output = subprocess.check_output(command, shell=True)
 
-    command = "ls _tmp/%s/*.log.final.out" % doc_id
+    command = "find  _tmp/%s/ |grep .log.final.out" % doc_id
     output = subprocess.check_output(command, shell=True)
     if output:
         log_files = output.rstrip().split("\n")
